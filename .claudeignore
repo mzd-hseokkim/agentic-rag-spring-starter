@@ -1,0 +1,81 @@
+# .claudeignore — files and directories Claude Code should skip when
+# reading / indexing this repository. Keeps context focused on source,
+# docs, and config; excludes build output, caches, binaries, and secrets.
+
+# Build output
+.gradle/
+build/
+out/
+bin/
+target/
+
+# Gradle wrapper binaries (keep scripts, ignore jar + dists)
+gradle/wrapper/gradle-wrapper.jar
+**/.gradle/
+
+# IDE / editor local state
+.idea/
+.vscode/
+.settings/
+*.iml
+*.iws
+*.ipr
+*.code-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+application-local.yml
+application-local.properties
+secrets/
+
+# Large / binary artifacts
+*.jar
+*.war
+*.ear
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.class
+
+# Media / binary assets not useful as context
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.ico
+*.mp4
+*.mov
+*.mp3
+*.wav
+
+# Vector / ML artifacts
+*.bin
+*.onnx
+*.gguf
+*.safetensors
+models/
+embeddings-cache/
+
+# Dependency caches / node
+node_modules/
+__pycache__/
+.pytest_cache/
+*.pyc
