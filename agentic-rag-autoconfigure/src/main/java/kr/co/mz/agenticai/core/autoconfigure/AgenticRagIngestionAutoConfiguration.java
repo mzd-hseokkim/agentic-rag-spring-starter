@@ -113,7 +113,7 @@ public class AgenticRagIngestionAutoConfiguration {
                             "Configured default strategy not found: " + override));
         }
         return strategies.stream()
-                .filter(s -> RecursiveCharacterChunkingStrategy.NAME.equals(s.name()))
+                .filter(s -> RecursiveCharacterChunkingStrategy.CANONICAL_NAME.equals(s.name()))
                 .findFirst()
                 .orElseGet(() -> strategies.stream().findFirst()
                         .orElseThrow(() -> new IngestionException("No ChunkingStrategy beans registered")));

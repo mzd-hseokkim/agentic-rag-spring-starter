@@ -20,7 +20,7 @@ import org.springframework.ai.document.Document;
  */
 public final class MarkdownHeadingChunkingStrategy implements ChunkingStrategy {
 
-    public static final String NAME = "markdown-heading";
+    public static final String CANONICAL_NAME = "markdown-heading";
 
     private static final Pattern HEADING = Pattern.compile("^(#{1,6})\\s+(.+?)\\s*$");
 
@@ -39,7 +39,7 @@ public final class MarkdownHeadingChunkingStrategy implements ChunkingStrategy {
 
     @Override
     public String name() {
-        return NAME;
+        return CANONICAL_NAME;
     }
 
     @Override
@@ -59,46 +59,70 @@ public final class MarkdownHeadingChunkingStrategy implements ChunkingStrategy {
             return List.of();
         }
 
-        List<Document> chunks = new ArrayList<>();
-        List<String> headingStack = new ArrayList<>();
-        StringBuilder current = new StringBuilder();
-        int index = 0;
-
+        State state = new State();
         for (String line : text.split("\n", -1)) {
-            Matcher m = HEADING.matcher(line);
-            if (m.matches()) {
-                int level = m.group(1).length();
-                if (level <= maxHeadingLevel) {
-                    if (!current.isEmpty()) {
-                        chunks.add(newChunk(document, current.toString(), headingStack, index++));
-                        current.setLength(0);
-                    }
-                    while (headingStack.size() >= level) {
-                        headingStack.remove(headingStack.size() - 1);
-                    }
-                    while (headingStack.size() < level - 1) {
-                        headingStack.add("");
-                    }
-                    headingStack.add(m.group(2).trim());
-                }
-            }
-            if (!current.isEmpty()) {
-                current.append('\n');
-            }
-            current.append(line);
+            maybeCloseChunkOnHeading(document, line, state);
+            appendLine(state, line);
         }
+        flushPending(document, state);
+        return state.chunks;
+    }
 
-        if (!current.isEmpty()) {
-            chunks.add(newChunk(document, current.toString(), headingStack, index));
+    /**
+     * If {@code line} is a heading at or above {@code maxHeadingLevel}, close
+     * the pending chunk and update the heading breadcrumb stack.
+     */
+    private void maybeCloseChunkOnHeading(Document document, String line, State state) {
+        Matcher m = HEADING.matcher(line);
+        if (!m.matches()) {
+            return;
         }
-        return chunks;
+        int level = m.group(1).length();
+        if (level > maxHeadingLevel) {
+            return;
+        }
+        if (!state.current.isEmpty()) {
+            state.chunks.add(newChunk(document, state.current.toString(), state.headingStack, state.index++));
+            state.current.setLength(0);
+        }
+        updateHeadingStack(state.headingStack, level, m.group(2).trim());
+    }
+
+    private static void updateHeadingStack(List<String> stack, int level, String heading) {
+        while (stack.size() >= level) {
+            stack.remove(stack.size() - 1);
+        }
+        while (stack.size() < level - 1) {
+            stack.add("");
+        }
+        stack.add(heading);
+    }
+
+    private static void appendLine(State state, String line) {
+        if (!state.current.isEmpty()) {
+            state.current.append('\n');
+        }
+        state.current.append(line);
+    }
+
+    private void flushPending(Document document, State state) {
+        if (!state.current.isEmpty()) {
+            state.chunks.add(newChunk(document, state.current.toString(), state.headingStack, state.index));
+        }
+    }
+
+    private static final class State {
+        final List<Document> chunks = new ArrayList<>();
+        final List<String> headingStack = new ArrayList<>();
+        final StringBuilder current = new StringBuilder();
+        int index = 0;
     }
 
     private Document newChunk(Document parent, String text, List<String> headingStack, int index) {
         Map<String, Object> metadata = new HashMap<>(parent.getMetadata());
         metadata.put(ChunkMetadata.PARENT_DOCUMENT_ID, parent.getId());
         metadata.put(ChunkMetadata.CHUNK_INDEX, index);
-        metadata.put(ChunkMetadata.CHUNK_STRATEGY, NAME);
+        metadata.put(ChunkMetadata.CHUNK_STRATEGY, CANONICAL_NAME);
         metadata.put(ChunkMetadata.HEADING_PATH, String.join(" > ", headingStack));
         return new Document(text, metadata);
     }

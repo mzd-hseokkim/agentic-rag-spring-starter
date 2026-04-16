@@ -36,8 +36,8 @@ public final class HydeQueryTransformer implements QueryTransformer {
 
     @Override
     public Query transform(Query query) {
-        if (query == null || query.text() == null || query.text().isBlank()) {
-            return query;
+        if (query == null) {
+            return null;
         }
         String rendered = promptTemplate.replace("{query}", query.text());
         String hypothetical;

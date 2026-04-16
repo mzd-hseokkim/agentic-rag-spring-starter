@@ -39,10 +39,18 @@ public final class LoggingGuardrail implements Guardrail {
     @Override
     public Result apply(String text) {
         if (log.isInfoEnabled()) {
-            String preview = text == null ? "<null>"
-                    : text.length() > MAX_LOG_CHARS ? text.substring(0, MAX_LOG_CHARS) + "…(truncated)" : text;
-            log.info("[guardrail] {} {} chars: {}", stage, text == null ? 0 : text.length(), preview);
+            log.info("[guardrail] {} {} chars: {}", stage, text == null ? 0 : text.length(), preview(text));
         }
         return Result.pass(text);
+    }
+
+    private static String preview(String text) {
+        if (text == null) {
+            return "<null>";
+        }
+        if (text.length() > MAX_LOG_CHARS) {
+            return text.substring(0, MAX_LOG_CHARS) + "…(truncated)";
+        }
+        return text;
     }
 }

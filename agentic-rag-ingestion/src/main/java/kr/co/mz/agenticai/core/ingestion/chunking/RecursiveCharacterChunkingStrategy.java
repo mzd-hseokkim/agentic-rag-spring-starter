@@ -18,7 +18,7 @@ import org.springframework.ai.document.Document;
  */
 public final class RecursiveCharacterChunkingStrategy implements ChunkingStrategy {
 
-    public static final String NAME = "recursive-character";
+    public static final String CANONICAL_NAME = "recursive-character";
 
     private static final List<String> DEFAULT_SEPARATORS = List.of("\n\n", "\n", ". ", " ", "");
 
@@ -56,7 +56,7 @@ public final class RecursiveCharacterChunkingStrategy implements ChunkingStrateg
 
     @Override
     public String name() {
-        return NAME;
+        return CANONICAL_NAME;
     }
 
     @Override
@@ -139,7 +139,7 @@ public final class RecursiveCharacterChunkingStrategy implements ChunkingStrateg
         Map<String, Object> metadata = new HashMap<>(parent.getMetadata());
         metadata.put(ChunkMetadata.PARENT_DOCUMENT_ID, parent.getId());
         metadata.put(ChunkMetadata.CHUNK_INDEX, index);
-        metadata.put(ChunkMetadata.CHUNK_STRATEGY, NAME);
+        metadata.put(ChunkMetadata.CHUNK_STRATEGY, CANONICAL_NAME);
         return new Document(text, metadata);
     }
 }

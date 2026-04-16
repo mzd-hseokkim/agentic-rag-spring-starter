@@ -14,7 +14,8 @@ public final class PiiMaskingGuardrail implements Guardrail {
     private record Rule(Pattern pattern, String replacement) {}
 
     private static final List<Rule> DEFAULT_RULES = List.of(
-            new Rule(Pattern.compile("\\b[\\w.+-]+@[\\w-]+(?:\\.[\\w-]+)+\\b"), "[REDACTED:EMAIL]"),
+            // Possessive quantifiers (++) prevent catastrophic backtracking on long inputs.
+            new Rule(Pattern.compile("\\b[\\w.+-]++@[\\w-]++(?:\\.[\\w-]++)++\\b"), "[REDACTED:EMAIL]"),
             // Korean RRN: 6 digits - 7 digits (e.g. 900101-1234567).
             new Rule(Pattern.compile("\\b\\d{6}-?\\d{7}\\b"), "[REDACTED:RRN]"),
             // Korean phone: 010-xxxx-xxxx, 02-xxxx-xxxx, etc.

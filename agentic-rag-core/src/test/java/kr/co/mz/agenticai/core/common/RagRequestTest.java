@@ -22,7 +22,8 @@ class RagRequestTest {
 
     @Test
     void nullQueryIsRejected() {
-        assertThatThrownBy(() -> RagRequest.builder().build())
+        RagRequest.Builder builder = RagRequest.builder();
+        assertThatThrownBy(builder::build)
                 .isInstanceOf(NullPointerException.class)
                 .hasMessageContaining("query");
     }

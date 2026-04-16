@@ -12,7 +12,7 @@ import org.springframework.ai.document.Document;
  */
 public final class DataConstructionAgent implements Agent {
 
-    public static final String NAME = "data-construction";
+    public static final String CANONICAL_NAME = "data-construction";
 
     private final int maxSources;
 
@@ -25,7 +25,7 @@ public final class DataConstructionAgent implements Agent {
 
     @Override
     public String name() {
-        return NAME;
+        return CANONICAL_NAME;
     }
 
     @Override
@@ -34,6 +34,6 @@ public final class DataConstructionAgent implements Agent {
         if (selected.size() > maxSources) {
             context.setSelectedSources(selected.subList(0, maxSources));
         }
-        context.recordStep(NAME);
+        context.recordStep(CANONICAL_NAME);
     }
 }

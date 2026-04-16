@@ -170,7 +170,7 @@ public final class LuceneBm25Index implements AutoCloseable {
         Map<String, Object> metadata = new HashMap<>(source.getMetadata());
         metadata.put(RetrievalMetadata.BM25_SCORE, (double) score);
         metadata.put(RetrievalMetadata.RANK, rank);
-        return new Document(source.getId(), source.getText(), metadata);
+        return new Document(source.getId(), Objects.requireNonNullElse(source.getText(), ""), metadata);
     }
 
     /** Number of indexed documents. */

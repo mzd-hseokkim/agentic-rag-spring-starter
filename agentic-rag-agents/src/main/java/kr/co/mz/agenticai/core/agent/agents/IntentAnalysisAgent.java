@@ -13,7 +13,7 @@ import org.springframework.ai.chat.prompt.Prompt;
  */
 public final class IntentAnalysisAgent implements Agent {
 
-    public static final String NAME = "intent";
+    public static final String CANONICAL_NAME = "intent";
 
     private static final Set<String> KNOWN = Set.of("factual", "conversational", "unsupported");
 
@@ -31,7 +31,7 @@ public final class IntentAnalysisAgent implements Agent {
 
     @Override
     public String name() {
-        return NAME;
+        return CANONICAL_NAME;
     }
 
     @Override
@@ -44,6 +44,6 @@ public final class IntentAnalysisAgent implements Agent {
         String intent = raw == null ? "" : raw.trim().toLowerCase().split("\\s+")[0]
                 .replaceAll("[^a-z]", "");
         context.setIntent(KNOWN.contains(intent) ? intent : "factual");
-        context.recordStep(NAME);
+        context.recordStep(CANONICAL_NAME);
     }
 }

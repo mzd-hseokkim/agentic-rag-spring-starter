@@ -19,7 +19,7 @@ import org.springframework.ai.vectorstore.VectorStore;
  */
 public final class VectorStoreDocumentSource implements DocumentSource {
 
-    public static final String NAME = "vector";
+    public static final String CANONICAL_NAME = "vector";
 
     private final VectorStore vectorStore;
 
@@ -29,7 +29,7 @@ public final class VectorStoreDocumentSource implements DocumentSource {
 
     @Override
     public String name() {
-        return NAME;
+        return CANONICAL_NAME;
     }
 
     @Override
@@ -50,7 +50,7 @@ public final class VectorStoreDocumentSource implements DocumentSource {
             // already present (some stores include it under "distance").
             metadata.computeIfAbsent(RetrievalMetadata.VECTOR_SCORE, k ->
                     d.getMetadata().getOrDefault("distance", null));
-            enriched.add(new Document(d.getId(), d.getText(), metadata));
+            enriched.add(new Document(d.getId(), Objects.requireNonNullElse(d.getText(), ""), metadata));
         }
         return enriched;
     }

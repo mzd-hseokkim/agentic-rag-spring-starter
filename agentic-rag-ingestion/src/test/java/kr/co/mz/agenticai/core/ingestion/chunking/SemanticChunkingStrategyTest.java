@@ -99,8 +99,8 @@ class SemanticChunkingStrategyTest {
 
         List<Document> chunks = strategy.chunk(new Document("aaa. bbb. ccc. ddd. eee.", Map.of()));
 
-        assertThat(chunks.size()).isGreaterThan(1);
-        assertThat(chunks).allSatisfy(c -> assertThat(c.getText().length()).isLessThanOrEqualTo(10));
+        assertThat(chunks).hasSizeGreaterThan(1)
+                .allSatisfy(c -> assertThat(c.getText().length()).isLessThanOrEqualTo(10));
     }
 
     @Test
@@ -134,7 +134,8 @@ class SemanticChunkingStrategyTest {
         when(model.embed(anyList())).thenThrow(new RuntimeException("network"));
         SemanticChunkingStrategy strategy = new SemanticChunkingStrategy(model);
 
-        assertThatThrownBy(() -> strategy.chunk(new Document("s1. s2.", Map.of())))
+        Document doc = new Document("s1. s2.", Map.of());
+        assertThatThrownBy(() -> strategy.chunk(doc))
                 .isInstanceOf(IngestionException.class)
                 .hasMessageContaining("EmbeddingModel failed");
     }

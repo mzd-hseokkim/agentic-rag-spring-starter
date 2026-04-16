@@ -31,7 +31,7 @@ import org.springframework.ai.embedding.EmbeddingModel;
  */
 public final class SemanticChunkingStrategy implements ChunkingStrategy {
 
-    public static final String NAME = "semantic";
+    public static final String CANONICAL_NAME = "semantic";
 
     /** Matches sentence boundaries: punctuation + whitespace, or Korean endings + Hangul start. */
     private static final Pattern SENTENCE_BOUNDARY =
@@ -61,7 +61,7 @@ public final class SemanticChunkingStrategy implements ChunkingStrategy {
 
     @Override
     public String name() {
-        return NAME;
+        return CANONICAL_NAME;
     }
 
     @Override
@@ -162,7 +162,7 @@ public final class SemanticChunkingStrategy implements ChunkingStrategy {
         Map<String, Object> metadata = new HashMap<>(parent.getMetadata());
         metadata.put(ChunkMetadata.PARENT_DOCUMENT_ID, parent.getId());
         metadata.put(ChunkMetadata.CHUNK_INDEX, index);
-        metadata.put(ChunkMetadata.CHUNK_STRATEGY, NAME);
+        metadata.put(ChunkMetadata.CHUNK_STRATEGY, CANONICAL_NAME);
         return new Document(text, metadata);
     }
 }

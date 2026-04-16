@@ -13,13 +13,15 @@ import kr.co.mz.agenticai.core.common.spi.Guardrail;
  */
 public final class PromptInjectionGuardrail implements Guardrail {
 
+    // CANON_EQ + UNICODE_CASE handle NFC/NFD-decomposed Hangul and non-ASCII case folding.
+    private static final int FLAGS = Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.CANON_EQ;
+
     private static final List<Pattern> DEFAULT_PATTERNS = List.of(
-            Pattern.compile("이전\\s*(지시|명령|규칙|프롬프트)[을를]?\\s*(무시|잊)", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("(시스템|system)\\s*(프롬프트|prompt)[을를]?\\s*(보여|출력|공개|reveal|show)",
-                    Pattern.CASE_INSENSITIVE),
-            Pattern.compile("ignore\\s+(?:all|previous|prior)\\s+instructions?", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("disregard\\s+(?:the\\s+)?(?:above|previous)", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("you\\s+are\\s+now\\s+(?:a|an)\\s+", Pattern.CASE_INSENSITIVE));
+            Pattern.compile("이전\\s*(지시|명령|규칙|프롬프트)[을를]?\\s*(무시|잊)", FLAGS),
+            Pattern.compile("(시스템|system)\\s*(프롬프트|prompt)[을를]?\\s*(보여|출력|공개|reveal|show)", FLAGS),
+            Pattern.compile("ignore\\s+(?:all|previous|prior)\\s+instructions?", FLAGS),
+            Pattern.compile("disregard\\s+(?:the\\s+)?(?:above|previous)", FLAGS),
+            Pattern.compile("you\\s+are\\s+now\\s+(?:a|an)\\s+", FLAGS));
 
     private final int order;
     private final List<Pattern> patterns;

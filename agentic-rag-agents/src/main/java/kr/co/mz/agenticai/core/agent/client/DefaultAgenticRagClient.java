@@ -34,6 +34,8 @@ import reactor.core.publisher.Flux;
  */
 public final class DefaultAgenticRagClient implements AgenticRagClient {
 
+    private static final String PROVIDER = "spring-ai";
+
     private final RetrieverRouter router;
     private final ChatModel chatModel;
     private final FactChecker factChecker;
@@ -49,24 +51,31 @@ public final class DefaultAgenticRagClient implements AgenticRagClient {
             FactChecker factChecker,
             RagEventPublisher events,
             List<Guardrail> guardrails,
-            String systemPrompt,
-            String userPromptTemplate,
-            int defaultTopK) {
+            PromptConfig promptConfig) {
+        Objects.requireNonNull(promptConfig, "promptConfig");
         this.router = Objects.requireNonNull(router, "router");
         this.chatModel = Objects.requireNonNull(chatModel, "chatModel");
         this.factChecker = factChecker;
         this.events = Objects.requireNonNull(events, "events");
         this.guardrails = guardrails == null ? List.of() : List.copyOf(guardrails);
-        this.systemPrompt = Objects.requireNonNull(systemPrompt, "systemPrompt");
-        this.userPromptTemplate = Objects.requireNonNull(userPromptTemplate, "userPromptTemplate");
-        if (!userPromptTemplate.contains("{query}") || !userPromptTemplate.contains("{sources}")) {
-            throw new IllegalArgumentException(
-                    "userPromptTemplate must contain {query} and {sources} placeholders");
+        this.systemPrompt = promptConfig.systemPrompt();
+        this.userPromptTemplate = promptConfig.userPromptTemplate();
+        this.defaultTopK = promptConfig.defaultTopK();
+    }
+
+    /** Groups the answer-generation prompt settings so the public constructor stays under 7 params. */
+    public record PromptConfig(String systemPrompt, String userPromptTemplate, int defaultTopK) {
+        public PromptConfig {
+            Objects.requireNonNull(systemPrompt, "systemPrompt");
+            Objects.requireNonNull(userPromptTemplate, "userPromptTemplate");
+            if (!userPromptTemplate.contains("{query}") || !userPromptTemplate.contains("{sources}")) {
+                throw new IllegalArgumentException(
+                        "userPromptTemplate must contain {query} and {sources} placeholders");
+            }
+            if (defaultTopK <= 0) {
+                throw new IllegalArgumentException("defaultTopK must be > 0");
+            }
         }
-        if (defaultTopK <= 0) {
-            throw new IllegalArgumentException("defaultTopK must be > 0");
-        }
-        this.defaultTopK = defaultTopK;
     }
 
     @Override
@@ -85,7 +94,7 @@ public final class DefaultAgenticRagClient implements AgenticRagClient {
 
         long llmStarted = System.currentTimeMillis();
         events.publish(new LlmEvent.LlmRequested(
-                "spring-ai", className(chatModel),
+                PROVIDER, className(chatModel),
                 renderedLength(prompt), Instant.now(), correlationId));
 
         String answer;
@@ -96,7 +105,7 @@ public final class DefaultAgenticRagClient implements AgenticRagClient {
             throw new AgenticRagException("LLM call failed", e);
         }
         events.publish(new LlmEvent.LlmResponded(
-                "spring-ai", className(chatModel), 0L, 0L,
+                PROVIDER, className(chatModel), 0L, 0L,
                 System.currentTimeMillis() - llmStarted, Instant.now(), correlationId));
 
         Guardrails.Outcome outputOutcome = Guardrails.apply(
@@ -124,7 +133,7 @@ public final class DefaultAgenticRagClient implements AgenticRagClient {
             Prompt prompt = buildPrompt(sanitizedRequest.query(), sources);
 
             events.publish(new LlmEvent.LlmRequested(
-                    "spring-ai", className(chatModel),
+                    PROVIDER, className(chatModel),
                     renderedLength(prompt), Instant.now(), correlationId));
 
             StringBuilder accumulated = new StringBuilder();
@@ -136,14 +145,14 @@ public final class DefaultAgenticRagClient implements AgenticRagClient {
                     .doOnNext(token -> {
                         accumulated.append(token);
                         events.publish(new LlmEvent.LlmTokenStreamed(
-                                "spring-ai", className(chatModel), token,
+                                PROVIDER, className(chatModel), token,
                                 Instant.now(), correlationId));
                     })
                     .map(token -> (RagStreamEvent) new RagStreamEvent.TokenChunk(token));
 
             Flux<RagStreamEvent> tail = Flux.defer(() -> {
                 events.publish(new LlmEvent.LlmResponded(
-                        "spring-ai", className(chatModel), 0L, 0L,
+                        PROVIDER, className(chatModel), 0L, 0L,
                         System.currentTimeMillis() - started.get(),
                         Instant.now(), correlationId));
                 Guardrails.Outcome outputOutcome = Guardrails.apply(

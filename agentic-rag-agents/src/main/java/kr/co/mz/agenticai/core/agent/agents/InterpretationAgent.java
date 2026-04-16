@@ -16,11 +16,11 @@ import org.springframework.ai.document.Document;
  */
 public final class InterpretationAgent implements Agent {
 
-    public static final String NAME = "interpretation";
+    public static final String CANONICAL_NAME = "interpretation";
 
     @Override
     public String name() {
-        return NAME;
+        return CANONICAL_NAME;
     }
 
     @Override
@@ -28,7 +28,7 @@ public final class InterpretationAgent implements Agent {
         List<Document> retrieved = context.retrieved();
         if (retrieved.isEmpty()) {
             context.setSelectedSources(List.of());
-            context.recordStep(NAME);
+            context.recordStep(CANONICAL_NAME);
             return;
         }
         Set<String> seenParents = new HashSet<>();
@@ -45,6 +45,6 @@ public final class InterpretationAgent implements Agent {
             }
         }
         context.setSelectedSources(kept);
-        context.recordStep(NAME);
+        context.recordStep(CANONICAL_NAME);
     }
 }

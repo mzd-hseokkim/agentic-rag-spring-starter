@@ -29,6 +29,9 @@ public class MetricsRagEventListener {
     private static final String M_AGENT_RUN_ITERS = "agentic.rag.agent.run.iterations";
     private static final String M_AGENT_RUN_FAIL = "agentic.rag.agent.run.failed";
 
+    private static final String TAG_PROVIDER = "provider";
+    private static final String TAG_MODEL = "model";
+
     private final MeterRegistry registry;
 
     public MetricsRagEventListener(MeterRegistry registry) {
@@ -63,13 +66,13 @@ public class MetricsRagEventListener {
     @EventListener
     public void onLlmResponded(LlmEvent.LlmResponded event) {
         registry.timer(M_LLM_DURATION,
-                        "provider", nullSafe(event.provider()),
-                        "model", nullSafe(event.model()))
+                        TAG_PROVIDER, nullSafe(event.provider()),
+                        TAG_MODEL, nullSafe(event.model()))
                 .record(event.elapsedMillis(), TimeUnit.MILLISECONDS);
         if (event.completionTokens() > 0) {
             registry.summary(M_LLM_TOKENS,
-                            "provider", nullSafe(event.provider()),
-                            "model", nullSafe(event.model()),
+                            TAG_PROVIDER, nullSafe(event.provider()),
+                            TAG_MODEL, nullSafe(event.model()),
                             "kind", "completion")
                     .record(event.completionTokens());
         }
@@ -78,8 +81,8 @@ public class MetricsRagEventListener {
     @EventListener
     public void onLlmTokenStreamed(LlmEvent.LlmTokenStreamed event) {
         registry.counter(M_LLM_TOKENS,
-                        "provider", nullSafe(event.provider()),
-                        "model", nullSafe(event.model()),
+                        TAG_PROVIDER, nullSafe(event.provider()),
+                        TAG_MODEL, nullSafe(event.model()),
                         "kind", "streamed")
                 .increment();
     }

@@ -84,18 +84,20 @@ class SequentialAgentOrchestratorTest {
         Agent a = stub("intent", ctx -> { throw new RuntimeException("boom"); });
 
         var orch = new SequentialAgentOrchestrator(List.of(a), events, 1, null);
+        RagRequest req = RagRequest.of("q");
 
-        assertThatThrownBy(() -> orch.run(RagRequest.of("q")))
+        assertThatThrownBy(() -> orch.run(req))
                 .isInstanceOf(AgenticRagException.class)
                 .hasMessageContaining("intent");
     }
 
     @Test
     void rejectsBadConstruction() {
-        assertThatThrownBy(() -> new SequentialAgentOrchestrator(List.of(), events, 1, null))
+        List<Agent> emptyAgents = List.of();
+        List<Agent> oneAgent = List.of(stub("a", ctx -> {}));
+        assertThatThrownBy(() -> new SequentialAgentOrchestrator(emptyAgents, events, 1, null))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new SequentialAgentOrchestrator(
-                List.of(stub("a", ctx -> {})), events, 0, null))
+        assertThatThrownBy(() -> new SequentialAgentOrchestrator(oneAgent, events, 0, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

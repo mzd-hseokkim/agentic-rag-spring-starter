@@ -12,6 +12,7 @@ junit = "5.11.4"
 assertj = "3.26.3"
 mockito = "5.14.2"
 testcontainers = "1.20.4"
+sonarqube = "7.2.3.7755"
 
 [libraries]
 spring-boot-starter = { module = "org.springframework.boot:spring-boot-starter" }
@@ -57,3 +58,4 @@ testcontainers-junit = { module = "org.testcontainers:junit-jupiter" }
 [plugins]
 spring-boot = { id = "org.springframework.boot", version.ref = "springBoot" }
 spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "springDependencyManagement" }
+sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }

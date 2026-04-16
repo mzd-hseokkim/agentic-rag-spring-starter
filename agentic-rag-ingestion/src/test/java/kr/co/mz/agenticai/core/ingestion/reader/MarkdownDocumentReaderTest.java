@@ -30,11 +30,10 @@ class MarkdownDocumentReaderTest {
     void readsSampleMarkdownAndAttachesSource() {
         List<Document> docs = reader.read(new ClassPathResource("sample.md"));
 
-        assertThat(docs).isNotEmpty();
-        assertThat(docs).allSatisfy(d -> {
-            assertThat(d.getMetadata()).containsEntry("contentType", "text/markdown");
-            assertThat(d.getMetadata()).containsEntry("source", "sample.md");
-        });
+        assertThat(docs).isNotEmpty()
+                .allSatisfy(d -> assertThat(d.getMetadata())
+                        .containsEntry("contentType", "text/markdown")
+                        .containsEntry("source", "sample.md"));
         // Spring AI's markdown reader may extract headings to metadata; just
         // verify that the body content (list items, prose) made it through.
         String combinedText = docs.stream().map(Document::getText).reduce("", String::concat);

@@ -67,6 +67,6 @@ public final class ReciprocalRankFusion implements ResultFusion {
     private static Document withFusedScore(Document doc, double score) {
         Map<String, Object> metadata = new HashMap<>(doc.getMetadata());
         metadata.put(RetrievalMetadata.FUSED_SCORE, score);
-        return new Document(doc.getId(), doc.getText(), metadata);
+        return new Document(doc.getId(), java.util.Objects.requireNonNullElse(doc.getText(), ""), metadata);
     }
 }

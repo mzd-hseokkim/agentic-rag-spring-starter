@@ -40,8 +40,9 @@ public class AgenticRagClientAutoConfiguration {
                 factChecker.getIfAvailable(),
                 events,
                 guardrails,
-                KoreanRagPrompts.SYSTEM,
-                KoreanRagPrompts.USER,
-                props.getClient().getDefaultTopK());
+                new DefaultAgenticRagClient.PromptConfig(
+                        KoreanRagPrompts.SYSTEM,
+                        KoreanRagPrompts.USER,
+                        props.getClient().getDefaultTopK()));
     }
 }

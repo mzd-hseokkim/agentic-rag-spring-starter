@@ -10,7 +10,7 @@ import org.springframework.ai.document.Document;
 /** {@link DocumentSource} backed by the in-memory Lucene BM25 index. */
 public final class Bm25DocumentSource implements DocumentSource {
 
-    public static final String NAME = "bm25";
+    public static final String CANONICAL_NAME = "bm25";
 
     private final LuceneBm25Index index;
 
@@ -20,7 +20,7 @@ public final class Bm25DocumentSource implements DocumentSource {
 
     @Override
     public String name() {
-        return NAME;
+        return CANONICAL_NAME;
     }
 
     @Override

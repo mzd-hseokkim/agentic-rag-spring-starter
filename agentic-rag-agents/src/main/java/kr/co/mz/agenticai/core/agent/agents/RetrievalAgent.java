@@ -12,7 +12,7 @@ import kr.co.mz.agenticai.core.common.spi.RetrieverRouter;
  */
 public final class RetrievalAgent implements Agent {
 
-    public static final String NAME = "retrieval";
+    public static final String CANONICAL_NAME = "retrieval";
 
     private final RetrieverRouter router;
     private final int defaultTopK;
@@ -27,14 +27,14 @@ public final class RetrievalAgent implements Agent {
 
     @Override
     public String name() {
-        return NAME;
+        return CANONICAL_NAME;
     }
 
     @Override
     public void execute(AgentContext context) {
         if ("conversational".equals(context.intent())) {
             context.setRetrieved(java.util.List.of());
-            context.recordStep(NAME + ":skip");
+            context.recordStep(CANONICAL_NAME + ":skip");
             return;
         }
         Integer override = context.request().overrides().topK();
@@ -44,6 +44,6 @@ public final class RetrievalAgent implements Agent {
                 context.request().metadataFilters(),
                 context.request().attributes()));
         context.setRetrieved(hits);
-        context.recordStep(NAME);
+        context.recordStep(CANONICAL_NAME);
     }
 }

@@ -13,7 +13,7 @@ import org.springframework.ai.document.Document;
  */
 public final class FixedSizeChunkingStrategy implements ChunkingStrategy {
 
-    public static final String NAME = "fixed-size";
+    public static final String CANONICAL_NAME = "fixed-size";
 
     private final int maxChars;
     private final int overlap;
@@ -36,7 +36,7 @@ public final class FixedSizeChunkingStrategy implements ChunkingStrategy {
 
     @Override
     public String name() {
-        return NAME;
+        return CANONICAL_NAME;
     }
 
     @Override
@@ -63,7 +63,7 @@ public final class FixedSizeChunkingStrategy implements ChunkingStrategy {
         Map<String, Object> metadata = new HashMap<>(parent.getMetadata());
         metadata.put(ChunkMetadata.PARENT_DOCUMENT_ID, parent.getId());
         metadata.put(ChunkMetadata.CHUNK_INDEX, index);
-        metadata.put(ChunkMetadata.CHUNK_STRATEGY, NAME);
+        metadata.put(ChunkMetadata.CHUNK_STRATEGY, CANONICAL_NAME);
         return new Document(text, metadata);
     }
 }

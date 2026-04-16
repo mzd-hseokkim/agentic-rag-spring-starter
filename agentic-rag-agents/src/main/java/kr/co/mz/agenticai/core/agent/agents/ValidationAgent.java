@@ -13,7 +13,7 @@ import kr.co.mz.agenticai.core.common.spi.FactChecker;
  */
 public final class ValidationAgent implements Agent {
 
-    public static final String NAME = "validation";
+    public static final String CANONICAL_NAME = "validation";
 
     private final FactChecker factChecker;
 
@@ -23,7 +23,7 @@ public final class ValidationAgent implements Agent {
 
     @Override
     public String name() {
-        return NAME;
+        return CANONICAL_NAME;
     }
 
     @Override
@@ -31,7 +31,7 @@ public final class ValidationAgent implements Agent {
         if (factChecker == null || context.selectedSources().isEmpty()
                 || context.answer() == null || context.answer().isBlank()) {
             context.setValidationPassed(true);
-            context.recordStep(NAME + ":skip");
+            context.recordStep(CANONICAL_NAME + ":skip");
             return;
         }
         FactChecker.FactCheckResult result = factChecker.check(new FactChecker.FactCheckRequest(
@@ -41,6 +41,6 @@ public final class ValidationAgent implements Agent {
         if (result.grounded() && !result.citations().isEmpty()) {
             context.setCitations(result.citations());
         }
-        context.recordStep(NAME);
+        context.recordStep(CANONICAL_NAME);
     }
 }

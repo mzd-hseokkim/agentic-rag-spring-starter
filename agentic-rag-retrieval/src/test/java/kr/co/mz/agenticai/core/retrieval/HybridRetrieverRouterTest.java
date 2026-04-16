@@ -23,15 +23,16 @@ class HybridRetrieverRouterTest {
 
     @Test
     void rejectsEmptySourcesAndBadOverscan() {
+        var emptySources = List.<kr.co.mz.agenticai.core.common.spi.DocumentSource>of();
+        var fusion = new ReciprocalRankFusion();
+        var reranker = new NoopReranker();
         assertThatThrownBy(() -> new HybridRetrieverRouter(
-                List.of(), new ReciprocalRankFusion(), new NoopReranker(),
-                null, null, events, 3))
+                emptySources, fusion, reranker, null, null, events, 3))
                 .isInstanceOf(IllegalArgumentException.class);
 
+        var oneSource = List.of(constSource("a", new Document("d", "x", Map.of())));
         assertThatThrownBy(() -> new HybridRetrieverRouter(
-                List.of(constSource("a", new Document("d", "x", Map.of()))),
-                new ReciprocalRankFusion(), new NoopReranker(),
-                null, null, events, 0))
+                oneSource, fusion, reranker, null, null, events, 0))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -49,9 +50,10 @@ class HybridRetrieverRouterTest {
 
         assertThat(hits).extracting(Document::getId).containsExactly("a", "b");
         // Events: QueryReceived, RetrievalCompleted, RerankCompleted
-        assertThat(events.events).hasAtLeastOneElementOfType(RetrievalEvent.QueryReceived.class);
-        assertThat(events.events).hasAtLeastOneElementOfType(RetrievalEvent.RetrievalCompleted.class);
-        assertThat(events.events).hasAtLeastOneElementOfType(RetrievalEvent.RerankCompleted.class);
+        assertThat(events.events)
+                .hasAtLeastOneElementOfType(RetrievalEvent.QueryReceived.class)
+                .hasAtLeastOneElementOfType(RetrievalEvent.RetrievalCompleted.class)
+                .hasAtLeastOneElementOfType(RetrievalEvent.RerankCompleted.class);
     }
 
     @Test

@@ -81,7 +81,7 @@ public class AgenticRagAgentsAutoConfiguration {
         return new SequentialAgentOrchestrator(
                 orderAgents(agents), events,
                 props.getAgents().getMaxIterations(),
-                RetrievalAgent.NAME);
+                RetrievalAgent.CANONICAL_NAME);
     }
 
     /**
@@ -92,12 +92,12 @@ public class AgenticRagAgentsAutoConfiguration {
      */
     private static List<Agent> orderAgents(List<Agent> agents) {
         List<String> order = List.of(
-                IntentAnalysisAgent.NAME,
-                RetrievalAgent.NAME,
-                InterpretationAgent.NAME,
-                DataConstructionAgent.NAME,
-                SummaryAgent.NAME,
-                ValidationAgent.NAME);
+                IntentAnalysisAgent.CANONICAL_NAME,
+                RetrievalAgent.CANONICAL_NAME,
+                InterpretationAgent.CANONICAL_NAME,
+                DataConstructionAgent.CANONICAL_NAME,
+                SummaryAgent.CANONICAL_NAME,
+                ValidationAgent.CANONICAL_NAME);
         java.util.Map<String, Agent> byName = new java.util.LinkedHashMap<>();
         for (Agent a : agents) {
             byName.put(a.name(), a);

@@ -52,35 +52,42 @@ Spring AI 기반 Agentic RAG **Spring Boot Starter 모듈군**. 서비스가 아
 ## 프로젝트 규칙 (Karpathy rule이 적용될 구체적 지점)
 
 ### 모듈 경계
+
 - `core`는 다른 내부 모듈에 의존하지 않는다.
 - feature 모듈(`ingestion`/`retrieval`/`agents`/`factcheck`)은 서로 직접 참조 금지. `core`의 SPI/이벤트로만 연결.
 - `autoconfigure`만 feature 모듈을 조립한다.
 - `starter`는 metadata만. 로직 없음.
 
 ### 의존성 관리
+
 - 모든 버전은 `gradle/libs.versions.toml` 단일 소스. 모듈 `build.gradle.kts`에서 버전 하드코딩 금지.
 
 ### SPI 설계
+
 - 확장 지점은 `interface` + `@ConditionalOnMissingBean` 기본 구현.
 - 사용자 Bean이 있으면 항상 override.
 - 내부 전용 클래스는 `internal` 서브 패키지에.
 
 ### 이벤트
+
 - ingestion / retrieval / agent / LLM streaming / factcheck 각 단계에서 이벤트 발행.
 - `RagEventPublisher` SPI로 외부 발송 위임. 기본 구현은 `ApplicationEventPublisher` 어댑터.
 - 스트리밍 토큰은 non-blocking.
 
 ### Phase 범위
+
 - **Phase 1에서 캐싱 금지.** 필요해 보여도 지금 넣지 않는다. (Phase 2 항목)
 - 그래프 검색, A2A, cost tracker, 다중 tenancy — 모두 Phase 2 이후.
 
 ### 주석
+
 - 기본은 **주석 없음**. 식별자가 WHAT을 설명한다.
 - 주석은 **비자명한 WHY만**: 숨겨진 제약, 특정 버그 우회, 놀라운 불변식.
 - 이슈 번호/PR 번호/"added for X flow" 같은 문구 코드에 박지 않는다.
 - 공개 API에만 Javadoc 필수.
 
 ### 파일 생성
+
 - 새 `.md` 문서는 **사용자가 명시적으로 요청할 때만** 만든다.
 - 기존 파일 편집 > 새 파일 생성.
 - 임의 계획/분석 문서 생성 금지.

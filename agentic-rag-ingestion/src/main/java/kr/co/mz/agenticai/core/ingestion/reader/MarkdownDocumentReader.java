@@ -55,7 +55,7 @@ public final class MarkdownDocumentReader implements DocumentReader {
             Map<String, Object> metadata = new HashMap<>(d.getMetadata());
             metadata.putIfAbsent("source", source);
             metadata.putIfAbsent("contentType", "text/markdown");
-            enriched.add(new Document(d.getId(), d.getText(), metadata));
+            enriched.add(new Document(d.getId(), java.util.Objects.requireNonNullElse(d.getText(), ""), metadata));
         }
         return enriched;
     }

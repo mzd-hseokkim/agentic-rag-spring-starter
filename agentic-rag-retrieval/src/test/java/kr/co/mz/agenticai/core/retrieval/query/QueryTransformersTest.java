@@ -53,7 +53,8 @@ class QueryTransformersTest {
         when(failing.call(any(Prompt.class))).thenThrow(new RuntimeException("timeout"));
         var transformer = new HydeQueryTransformer(failing);
 
-        assertThatThrownBy(() -> transformer.transform(new Query("hi")))
+        Query query = new Query("hi");
+        assertThatThrownBy(() -> transformer.transform(query))
                 .isInstanceOf(RetrievalException.class);
     }
 

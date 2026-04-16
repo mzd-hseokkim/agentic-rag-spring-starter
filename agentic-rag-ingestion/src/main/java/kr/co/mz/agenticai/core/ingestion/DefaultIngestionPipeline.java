@@ -86,9 +86,10 @@ public final class DefaultIngestionPipeline implements IngestionPipeline {
         for (Document doc : documents) {
             Document prepared = normalizer.normalize(applyMetadataOverrides(doc, request));
 
+            String preparedText = prepared.getText();
             events.publish(new IngestionEvent.DocumentRead(
                     prepared.getId(), describe(request.resource()),
-                    prepared.getText() == null ? 0 : prepared.getText().length(),
+                    preparedText == null ? 0 : preparedText.length(),
                     Instant.now(), correlationId));
 
             ChunkingStrategy strategy = selectStrategy(prepared, request);
@@ -144,7 +145,7 @@ public final class DefaultIngestionPipeline implements IngestionPipeline {
         }
         Map<String, Object> merged = new HashMap<>(doc.getMetadata());
         merged.putAll(request.metadataOverrides());
-        return new Document(doc.getId(), doc.getText(), merged);
+        return new Document(doc.getId(), Objects.requireNonNullElse(doc.getText(), ""), merged);
     }
 
     private void emitFailed(String correlationId, String documentId, Throwable error) {

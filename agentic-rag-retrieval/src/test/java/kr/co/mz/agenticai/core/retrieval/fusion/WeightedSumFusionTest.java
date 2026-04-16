@@ -12,9 +12,11 @@ class WeightedSumFusionTest {
 
     @Test
     void rejectsEmptyOrNegativeWeights() {
-        assertThatThrownBy(() -> new WeightedSumFusion(List.of()))
+        List<Double> empty = List.of();
+        List<Double> negative = List.of(-0.1);
+        assertThatThrownBy(() -> new WeightedSumFusion(empty))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new WeightedSumFusion(List.of(-0.1)))
+        assertThatThrownBy(() -> new WeightedSumFusion(negative))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -22,8 +24,9 @@ class WeightedSumFusionTest {
     void failsWhenListCountDiffersFromWeights() {
         WeightedSumFusion fusion = new WeightedSumFusion(List.of(0.5, 0.5));
         List<Document> a = List.of(new Document("a", "A", Map.of()));
+        List<List<Document>> onlyOneList = List.of(a);
 
-        assertThatThrownBy(() -> fusion.fuse(List.of(a), 1))
+        assertThatThrownBy(() -> fusion.fuse(onlyOneList, 1))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

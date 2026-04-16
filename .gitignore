@@ -56,6 +56,9 @@ application-local.properties
 # Claude Code local settings
 .claude/
 
+# SonarQube credentials (loaded at build time via root build.gradle.kts)
+sonar-tokens.properties
+
 # Publishing artifacts
 *.jar
 *.war

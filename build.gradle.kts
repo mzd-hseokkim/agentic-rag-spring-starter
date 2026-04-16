@@ -1,7 +1,23 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     `java-library`
     `maven-publish`
     alias(libs.plugins.spring.dependency.management) apply false
+    alias(libs.plugins.sonarqube)
+}
+
+// Load gitignored SonarQube credentials (sonar.login / sonar.token) into
+// system properties so the sonarqube plugin picks them up.
+file("sonar-tokens.properties").let { tokensFile ->
+    if (tokensFile.exists()) {
+        val props = Properties()
+        FileInputStream(tokensFile).use { props.load(it) }
+        props.forEach { key, value ->
+            System.setProperty(key.toString(), value.toString())
+        }
+    }
 }
 
 allprojects {
@@ -13,6 +29,7 @@ subprojects {
     apply(plugin = "java-library")
     apply(plugin = "maven-publish")
     apply(plugin = "io.spring.dependency-management")
+    apply(plugin = "jacoco")
 
     extensions.configure<JavaPluginExtension> {
         toolchain {
@@ -40,6 +57,15 @@ subprojects {
 
     tasks.withType<Test>().configureEach {
         useJUnitPlatform()
+        finalizedBy(tasks.named("jacocoTestReport"))
+    }
+
+    tasks.named<JacocoReport>("jacocoTestReport") {
+        dependsOn(tasks.named("test"))
+        reports {
+            xml.required.set(true)
+            html.required.set(false)
+        }
     }
 
     tasks.withType<Javadoc>().configureEach {
@@ -74,5 +100,17 @@ subprojects {
         repositories {
             mavenLocal()
         }
+    }
+}
+
+sonar {
+    properties {
+        property("sonar.sourceEncoding", "UTF-8")
+        property("sonar.java.source", "21")
+        property("sonar.coverage.jacoco.xmlReportPaths",
+                subprojects.joinToString(",") { "${it.layout.buildDirectory.get().asFile}/reports/jacoco/test/jacocoTestReport.xml" })
+        // Exclude generated / boilerplate from coverage metrics.
+        property("sonar.coverage.exclusions",
+                "**/package-info.java,**/*AutoConfiguration.java,**/*Properties.java")
     }
 }

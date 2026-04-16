@@ -48,15 +48,16 @@ class DefaultAgenticRagClientTest {
         var client = new DefaultAgenticRagClient(
                 router, chat, null, events,
                 List.<kr.co.mz.agenticai.core.common.spi.Guardrail>of(),
-                KoreanRagPrompts.SYSTEM, KoreanRagPrompts.USER, 5);
+                new DefaultAgenticRagClient.PromptConfig(KoreanRagPrompts.SYSTEM, KoreanRagPrompts.USER, 5));
 
         RagResponse response = client.ask(RagRequest.of("RRF란?"));
 
         assertThat(response.answer()).isEqualTo("RRF로 결합합니다.");
         assertThat(response.citations()).hasSize(1);
         assertThat(response.citations().get(0).documentId()).isEqualTo("c1");
-        assertThat(events.events).hasAtLeastOneElementOfType(LlmEvent.LlmRequested.class);
-        assertThat(events.events).hasAtLeastOneElementOfType(LlmEvent.LlmResponded.class);
+        assertThat(events.events)
+                .hasAtLeastOneElementOfType(LlmEvent.LlmRequested.class)
+                .hasAtLeastOneElementOfType(LlmEvent.LlmResponded.class);
     }
 
     @Test
@@ -77,7 +78,7 @@ class DefaultAgenticRagClientTest {
         var client = new DefaultAgenticRagClient(
                 router, chat, factChecker, events,
                 List.<kr.co.mz.agenticai.core.common.spi.Guardrail>of(),
-                KoreanRagPrompts.SYSTEM, KoreanRagPrompts.USER, 5);
+                new DefaultAgenticRagClient.PromptConfig(KoreanRagPrompts.SYSTEM, KoreanRagPrompts.USER, 5));
 
         RagResponse response = client.ask(RagRequest.of("질문"));
 
@@ -97,7 +98,7 @@ class DefaultAgenticRagClientTest {
         var client = new DefaultAgenticRagClient(
                 router, chat, null, events,
                 List.<kr.co.mz.agenticai.core.common.spi.Guardrail>of(),
-                KoreanRagPrompts.SYSTEM, KoreanRagPrompts.USER, 3);
+                new DefaultAgenticRagClient.PromptConfig(KoreanRagPrompts.SYSTEM, KoreanRagPrompts.USER, 3));
 
         StepVerifier.create(client.askStream(RagRequest.of("hi")))
                 .expectNextMatches(e -> e instanceof RagStreamEvent.TokenChunk t && t.text().equals("안녕"))
@@ -125,7 +126,7 @@ class DefaultAgenticRagClientTest {
         var client = new DefaultAgenticRagClient(
                 router, chat, null, events,
                 List.<kr.co.mz.agenticai.core.common.spi.Guardrail>of(),
-                KoreanRagPrompts.SYSTEM, KoreanRagPrompts.USER, 3);
+                new DefaultAgenticRagClient.PromptConfig(KoreanRagPrompts.SYSTEM, KoreanRagPrompts.USER, 3));
 
         StepVerifier.create(client.askStream(RagRequest.of("hi")))
                 .expectNextMatches(e -> e instanceof RagStreamEvent.Failed f
@@ -144,7 +145,7 @@ class DefaultAgenticRagClientTest {
         var client = new DefaultAgenticRagClient(
                 router, chat, null, events,
                 List.<kr.co.mz.agenticai.core.common.spi.Guardrail>of(),
-                KoreanRagPrompts.SYSTEM, KoreanRagPrompts.USER, 5);
+                new DefaultAgenticRagClient.PromptConfig(KoreanRagPrompts.SYSTEM, KoreanRagPrompts.USER, 5));
 
         client.ask(RagRequest.builder()
                 .query("q")

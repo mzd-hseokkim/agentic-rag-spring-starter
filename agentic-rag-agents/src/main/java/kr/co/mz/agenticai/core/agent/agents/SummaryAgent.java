@@ -18,7 +18,7 @@ import org.springframework.ai.document.Document;
  */
 public final class SummaryAgent implements Agent {
 
-    public static final String NAME = "summary";
+    public static final String CANONICAL_NAME = "summary";
 
     private final ChatModel chatModel;
     private final String systemPrompt;
@@ -39,7 +39,7 @@ public final class SummaryAgent implements Agent {
 
     @Override
     public String name() {
-        return NAME;
+        return CANONICAL_NAME;
     }
 
     @Override
@@ -53,7 +53,7 @@ public final class SummaryAgent implements Agent {
         context.setAnswer(answer == null ? "" : answer);
         // Default citations from selected sources; ValidationAgent may refine.
         context.setCitations(Citation.fromDocuments(context.selectedSources()));
-        context.recordStep(NAME);
+        context.recordStep(CANONICAL_NAME);
     }
 
     private static String renderSources(List<Document> sources) {

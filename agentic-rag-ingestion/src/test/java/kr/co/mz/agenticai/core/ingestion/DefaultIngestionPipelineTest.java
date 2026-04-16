@@ -38,17 +38,19 @@ class DefaultIngestionPipelineTest {
         assertThat(result.totalChunks()).isPositive();
         assertThat(result.chunkIds()).hasSize(result.totalChunks());
         assertThat(sink.received).isNotEmpty();
-        assertThat(events.events).hasAtLeastOneElementOfType(IngestionEvent.DocumentRead.class);
-        assertThat(events.events).hasAtLeastOneElementOfType(IngestionEvent.DocumentChunked.class);
-        assertThat(events.events).hasAtLeastOneElementOfType(IngestionEvent.IngestionCompleted.class);
+        assertThat(events.events)
+                .hasAtLeastOneElementOfType(IngestionEvent.DocumentRead.class)
+                .hasAtLeastOneElementOfType(IngestionEvent.DocumentChunked.class)
+                .hasAtLeastOneElementOfType(IngestionEvent.IngestionCompleted.class);
     }
 
     @Test
     void failsWhenNoReaderSupportsResource() {
         DefaultIngestionPipeline pipeline = buildPipeline();
-        ByteArrayResource unknown = new ByteArrayResource("hello".getBytes(), "a.unknown");
+        IngestionRequest request = IngestionRequest.of(
+                new ByteArrayResource("hello".getBytes(), "a.unknown"));
 
-        assertThatThrownBy(() -> pipeline.ingest(IngestionRequest.of(unknown)))
+        assertThatThrownBy(() -> pipeline.ingest(request))
                 .isInstanceOf(IngestionException.class)
                 .hasMessageContaining("No DocumentReader");
     }
@@ -80,7 +82,8 @@ class DefaultIngestionPipelineTest {
                 List.of(failing),
                 events);
 
-        assertThatThrownBy(() -> pipeline.ingest(IngestionRequest.of(new ClassPathResource("sample.md"))))
+        IngestionRequest req = IngestionRequest.of(new ClassPathResource("sample.md"));
+        assertThatThrownBy(() -> pipeline.ingest(req))
                 .isInstanceOf(IngestionException.class)
                 .hasMessageContaining("ChunkSink");
         assertThat(events.events).hasAtLeastOneElementOfType(IngestionEvent.IngestionFailed.class);

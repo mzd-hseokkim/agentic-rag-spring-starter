@@ -44,7 +44,7 @@ public final class MultiQueryExpander implements QueryExpander {
 
     @Override
     public List<Query> expand(Query query) {
-        if (query == null || query.text() == null || query.text().isBlank()) {
+        if (query == null) {
             return List.of();
         }
         String rendered = promptTemplate
@@ -77,6 +77,6 @@ public final class MultiQueryExpander implements QueryExpander {
 
     /** Strip common leading markers like "1. ", "- ", "• ". */
     private static String stripBulletPrefix(String line) {
-        return line.replaceFirst("^\\s*(?:[0-9]+[.)]|[-*•])\\s+", "").trim();
+        return line.replaceFirst("^\\s*(?:\\d+[.)]|[-*•])\\s+", "").trim();
     }
 }

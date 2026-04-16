@@ -77,7 +77,7 @@ class OllamaIntegrationTest {
                     IngestionRequest.of(new ClassPathResource("korean-sample.md")));
 
             assertThat(result.totalChunks()).isPositive();
-            assertThat(result.elapsedMillis()).isGreaterThanOrEqualTo(0);
+            assertThat(result.elapsedMillis()).isNotNegative();
 
             LuceneBm25Index bm25 = ctx.getBean(LuceneBm25Index.class);
             // Note: Spring AI's MarkdownDocumentReader extracts headings into
@@ -121,8 +121,9 @@ class OllamaIntegrationTest {
             List<Document> hits = router.retrieve(
                     RetrieverRouter.Query.of("RRF 알고리즘으로 결과를 융합", 5));
 
-            assertThat(hits).as("Hybrid router should return fused hits").isNotEmpty();
-            assertThat(hits.size()).isLessThanOrEqualTo(5);
+            assertThat(hits).as("Hybrid router should return fused hits")
+                    .isNotEmpty()
+                    .hasSizeLessThanOrEqualTo(5);
         });
     }
 

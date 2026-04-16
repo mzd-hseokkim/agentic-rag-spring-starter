@@ -83,7 +83,8 @@ class LlmFactCheckerTest {
     void invalidJsonThrows() {
         var checker = new LlmFactChecker(mockReplying("그냥 평문 응답입니다 JSON 없음"));
 
-        assertThatThrownBy(() -> checker.check(req("답변", new Document("c1", "x", Map.of()))))
+        FactChecker.FactCheckRequest request = req("답변", new Document("c1", "x", Map.of()));
+        assertThatThrownBy(() -> checker.check(request))
                 .isInstanceOf(AgenticRagException.class)
                 .hasMessageContaining("JSON");
     }
