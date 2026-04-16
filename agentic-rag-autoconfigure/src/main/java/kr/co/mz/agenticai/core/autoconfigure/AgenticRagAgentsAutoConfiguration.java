@@ -26,8 +26,7 @@ import org.springframework.context.annotation.Bean;
 @AutoConfiguration(after = {
         AgenticRagCoreAutoConfiguration.class,
         AgenticRagRetrievalAutoConfiguration.class,
-        AgenticRagFactCheckAutoConfiguration.class,
-        AgenticRagClientAutoConfiguration.class
+        AgenticRagFactCheckAutoConfiguration.class
 })
 @ConditionalOnProperty(prefix = "agentic-rag.agents", name = "enabled", havingValue = "true")
 public class AgenticRagAgentsAutoConfiguration {

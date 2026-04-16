@@ -28,3 +28,7 @@ include(
     "agentic-rag-autoconfigure",
     "agentic-rag-spring-boot-starter",
 )
+
+// Runnable demo application — see examples/agentic-rag-demo/README.md.
+include(":examples:agentic-rag-demo")
+project(":examples:agentic-rag-demo").projectDir = file("examples/agentic-rag-demo")

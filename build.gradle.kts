@@ -26,6 +26,23 @@ allprojects {
 }
 
 subprojects {
+    // Runnable example apps configure themselves (Spring Boot plugin, no publishing).
+    if (path.startsWith(":examples:")) {
+        apply(plugin = "io.spring.dependency-management")
+        apply(plugin = "java")
+        extensions.configure<JavaPluginExtension> {
+            toolchain {
+                languageVersion.set(JavaLanguageVersion.of(21))
+                vendor.set(JvmVendorSpec.ADOPTIUM)
+            }
+        }
+        tasks.withType<JavaCompile>().configureEach {
+            options.encoding = "UTF-8"
+            options.release.set(21)
+        }
+        return@subprojects
+    }
+
     apply(plugin = "java-library")
     apply(plugin = "maven-publish")
     apply(plugin = "io.spring.dependency-management")
