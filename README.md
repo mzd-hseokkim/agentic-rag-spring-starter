@@ -209,7 +209,9 @@ Ollama `qwen3-embedding:4b` + `gpt-oss:20b` 환경에서 전 시나리오 실측
 - [docs/validation-report.md](docs/validation-report.md) — 검증 리포트 (실측 결과 + 발견 버그 + 수정 내역)
 - [CLAUDE.md](CLAUDE.md) — 이 저장소에서의 코딩 원칙 (Karpathy Guidelines 기반)
 
-## Roadmap (Phase 2)
+## Roadmap
+
+### Phase 2 — 고급 RAG 패턴
 
 - Tool calling (Spring AI `@Tool`) + MCP client 통합
 - Semantic / prompt caching
@@ -222,6 +224,28 @@ Ollama `qwen3-embedding:4b` + `gpt-oss:20b` 환경에서 전 시나리오 실측
 - Cost tracker + rate-limit guardrail
 - Evaluation harness (Recall@k, MRR, Faithfulness)
 - Maven Central 퍼블리싱
+
+### Phase 3 — 프로덕션 품질
+
+**멀티모달 처리**
+- PDF 표/이미지 추출 `DocumentReader` — 표(table) → Markdown 변환, 이미지 캡션을 chunk에 포함
+- 멀티모달 RAG — 이미지 기반 질의 + 텍스트 결합 검색 (Spring AI Vision 연계)
+- DOCX / HTML / PPTX `DocumentReader` 확장
+
+**응답 품질**
+- 구조화된 출력 — JSON Schema 기반 응답 포맷 강제 (`@StructuredOutput`)
+- Citation 소스 매핑 — 답변 내 인용 구간을 원본 문서의 정확한 위치(offset)와 매핑
+- 피드백 SPI — 👍/👎 이벤트를 `RagEvent`로 발행, 서비스가 수집·활용할 수 있는 확장 지점
+
+**안정성**
+- LLM 폴백 — 1차 모델 장애 시 자동으로 대체 모델 전환 (circuit breaker 패턴)
+- 프롬프트 외부화 — 프롬프트 템플릿을 `Resource`로 분리, 재배포 없이 교체 가능
+- Guardrail 체이닝 — 여러 Guardrail의 실행 순서·단락(short-circuit) 전략 설정
+
+**개발자 경험**
+- Actuator Health Indicator — 벡터 DB 연결, LLM 모델 상태, BM25 인덱스 크기 자동 노출
+- 테스트 픽스처 — `MockAgenticRagClient`, `StubFactChecker` 등 단위 테스트용 fake 구현체
+- Starter BOM — 버전 충돌 방지를 위한 `agentic-rag-bom` artifact 제공
 
 ## License
 
