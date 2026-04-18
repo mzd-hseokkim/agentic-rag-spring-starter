@@ -72,9 +72,11 @@ public class AgenticRagRetrievalAutoConfiguration {
         return new NoopReranker();
     }
 
+    // NOTE: no @ConditionalOnBean(ChatModel.class) on query transformers —
+    // Spring AI model auto-configs may register ChatModel AFTER our conditions
+    // are evaluated. We rely on constructor injection instead.
     @Bean(name = "hydeQueryTransformer")
     @ConditionalOnMissingBean(name = "hydeQueryTransformer")
-    @ConditionalOnBean(ChatModel.class)
     @ConditionalOnProperty(prefix = "agentic-rag.retrieval.query.hyde", name = "enabled",
             havingValue = "true")
     public HydeQueryTransformer hydeQueryTransformer(ChatModel chatModel) {
@@ -83,7 +85,6 @@ public class AgenticRagRetrievalAutoConfiguration {
 
     @Bean(name = "rewriteQueryTransformer")
     @ConditionalOnMissingBean(name = "rewriteQueryTransformer")
-    @ConditionalOnBean(ChatModel.class)
     @ConditionalOnProperty(prefix = "agentic-rag.retrieval.query.rewrite", name = "enabled",
             havingValue = "true")
     public RewriteQueryTransformer rewriteQueryTransformer(ChatModel chatModel) {
@@ -92,7 +93,6 @@ public class AgenticRagRetrievalAutoConfiguration {
 
     @Bean(name = "multiQueryExpander")
     @ConditionalOnMissingBean(name = "multiQueryExpander")
-    @ConditionalOnBean(ChatModel.class)
     @ConditionalOnProperty(prefix = "agentic-rag.retrieval.query.multi-query", name = "enabled",
             havingValue = "true")
     public MultiQueryExpander multiQueryExpander(ChatModel chatModel, AgenticRagProperties props) {

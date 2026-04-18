@@ -12,6 +12,7 @@ import kr.co.mz.agenticai.core.common.RagRequest;
 import kr.co.mz.agenticai.core.common.RagResponse;
 import kr.co.mz.agenticai.core.common.RagStreamEvent;
 import kr.co.mz.agenticai.core.common.RagUsage;
+import kr.co.mz.agenticai.core.common.event.FactCheckEvent;
 import kr.co.mz.agenticai.core.common.event.LlmEvent;
 import kr.co.mz.agenticai.core.common.exception.AgenticRagException;
 import kr.co.mz.agenticai.core.common.guardrail.Guardrails;
@@ -204,8 +205,20 @@ public final class DefaultAgenticRagClient implements AgenticRagClient {
     private RagResponse buildResponse(String query, String answer, List<Document> sources) {
         List<Citation> citations;
         if (factChecker != null && !sources.isEmpty()) {
+            long started = System.currentTimeMillis();
             FactChecker.FactCheckResult result = factChecker.check(
                     new FactChecker.FactCheckRequest(answer, sources, query, Map.of()));
+            long elapsed = System.currentTimeMillis() - started;
+            String summary = answer == null ? "" : answer.substring(0, Math.min(answer.length(), 80));
+            if (result.grounded()) {
+                events.publish(new FactCheckEvent.FactCheckPassed(
+                        summary, result.confidence(), result.citations().size(),
+                        elapsed, Instant.now(), UUID.randomUUID().toString()));
+            } else {
+                events.publish(new FactCheckEvent.FactCheckFailed(
+                        summary, result.confidence(), result.reason(),
+                        elapsed, Instant.now(), UUID.randomUUID().toString()));
+            }
             citations = result.citations().isEmpty() ? Citation.fromDocuments(sources) : result.citations();
         } else {
             citations = Citation.fromDocuments(sources);

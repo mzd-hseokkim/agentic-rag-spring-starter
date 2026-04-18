@@ -1,0 +1,5 @@
+agentic-rag:
+  retrieval:
+    query:
+      hyde: { enabled: true }
+      multi-query: { enabled: true, count: 3, include-original: true }

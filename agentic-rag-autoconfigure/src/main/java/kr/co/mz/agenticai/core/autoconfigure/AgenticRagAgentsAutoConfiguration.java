@@ -31,16 +31,18 @@ import org.springframework.context.annotation.Bean;
 @ConditionalOnProperty(prefix = "agentic-rag.agents", name = "enabled", havingValue = "true")
 public class AgenticRagAgentsAutoConfiguration {
 
+    // NOTE: no @ConditionalOnBean(ChatModel.class) — Spring AI model
+    // auto-configs may register their ChatModel AFTER our condition is
+    // evaluated, causing false negatives. We rely on constructor injection
+    // to surface a clear error if no ChatModel bean exists.
     @Bean(name = "intentAnalysisAgent")
     @ConditionalOnMissingBean(name = "intentAnalysisAgent")
-    @ConditionalOnBean(ChatModel.class)
     public Agent intentAnalysisAgent(ChatModel chatModel) {
         return new IntentAnalysisAgent(chatModel);
     }
 
     @Bean(name = "retrievalAgent")
     @ConditionalOnMissingBean(name = "retrievalAgent")
-    @ConditionalOnBean(RetrieverRouter.class)
     public Agent retrievalAgent(RetrieverRouter router, AgenticRagProperties props) {
         return new RetrievalAgent(router, props.getClient().getDefaultTopK());
     }
@@ -59,20 +61,18 @@ public class AgenticRagAgentsAutoConfiguration {
 
     @Bean(name = "summaryAgent")
     @ConditionalOnMissingBean(name = "summaryAgent")
-    @ConditionalOnBean(ChatModel.class)
     public Agent summaryAgent(ChatModel chatModel) {
         return new SummaryAgent(chatModel);
     }
 
     @Bean(name = "validationAgent")
     @ConditionalOnMissingBean(name = "validationAgent")
-    public Agent validationAgent(ObjectProvider<FactChecker> factChecker) {
-        return new ValidationAgent(factChecker.getIfAvailable());
+    public Agent validationAgent(ObjectProvider<FactChecker> factChecker, RagEventPublisher events) {
+        return new ValidationAgent(factChecker.getIfAvailable(), events);
     }
 
     @Bean
     @ConditionalOnMissingBean(AgentOrchestrator.class)
-    @ConditionalOnBean(value = {ChatModel.class, RetrieverRouter.class})
     public AgentOrchestrator agentOrchestrator(
             List<Agent> agents,
             RagEventPublisher events,

@@ -23,3 +23,10 @@ dependencies {
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }
+
+tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
+    // Forward -Pprofile=xxx as --spring.profiles.active=xxx
+    if (project.hasProperty("profile")) {
+        args("--spring.profiles.active=${project.property("profile")}")
+    }
+}

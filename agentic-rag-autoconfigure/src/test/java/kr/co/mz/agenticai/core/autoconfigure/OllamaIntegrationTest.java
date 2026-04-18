@@ -183,7 +183,10 @@ class OllamaIntegrationTest {
 
     @Test
     void agenticRagClientAnswersFromIngestedSources() {
-        runner.withUserConfiguration(OllamaChatConfig.class).run(ctx -> {
+        runner.withConfiguration(AutoConfigurations.of(
+                AgenticRagFactCheckAutoConfiguration.class,
+                AgenticRagClientAutoConfiguration.class))
+                .withUserConfiguration(OllamaChatConfig.class).run(ctx -> {
             IngestionPipeline pipeline = ctx.getBean(IngestionPipeline.class);
             pipeline.ingest(IngestionRequest.of(new ClassPathResource("korean-sample.md")));
 
@@ -199,7 +202,10 @@ class OllamaIntegrationTest {
 
     @Test
     void agenticRagClientStreamsTokensThenCompleted() {
-        runner.withUserConfiguration(OllamaChatConfig.class).run(ctx -> {
+        runner.withConfiguration(AutoConfigurations.of(
+                AgenticRagFactCheckAutoConfiguration.class,
+                AgenticRagClientAutoConfiguration.class))
+                .withUserConfiguration(OllamaChatConfig.class).run(ctx -> {
             IngestionPipeline pipeline = ctx.getBean(IngestionPipeline.class);
             pipeline.ingest(IngestionRequest.of(new ClassPathResource("korean-sample.md")));
 
