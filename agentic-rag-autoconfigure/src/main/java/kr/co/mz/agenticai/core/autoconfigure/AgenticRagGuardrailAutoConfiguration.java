@@ -10,6 +10,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 
 @AutoConfiguration(after = AgenticRagCoreAutoConfiguration.class)
+@ConditionalOnProperty(prefix = "agentic-rag.guardrails", name = "enabled", matchIfMissing = true)
 public class AgenticRagGuardrailAutoConfiguration {
 
     @Bean(name = "promptInjectionGuardrail")

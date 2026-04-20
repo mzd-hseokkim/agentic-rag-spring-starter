@@ -148,6 +148,7 @@ DocumentReader  →  Cleaner  →  ChunkingStrategy  →  MetadataEnricher
 - **Hybrid Fusion** — RRF(Reciprocal Rank Fusion) 기본, Weighted-Sum 옵션.
 - **Query Transformation**
   - HyDE, Multi-Query, Sub-question decomposition, Query Rewriting
+  - `ChatModel` 의존 Bean(HyDE/Rewrite/MultiQuery)은 `@ConditionalOnBean(ChatModel.class)` 대신 **생성자 주입**에 의존한다. Spring AI의 `ChatModel` auto-config가 우리 조건 평가 후에 등록되는 순서 이슈를 피하기 위함이며, 사용자가 opt-in(`agentic-rag.retrieval.query.*.enabled=true`)했는데 `ChatModel`이 없으면 startup 단계에서 명시적으로 실패한다.
 - **Reranker**
   - `NoopReranker` (기본), `CrossEncoderReranker` SPI (ONNX/사내 모델 어댑터 가능).
 - **Routing**
