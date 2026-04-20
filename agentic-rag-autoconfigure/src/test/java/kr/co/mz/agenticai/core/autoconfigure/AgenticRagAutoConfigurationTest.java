@@ -7,13 +7,22 @@ import java.util.List;
 import kr.co.mz.agenticai.core.common.IngestionPipeline;
 import kr.co.mz.agenticai.core.common.event.ApplicationEventRagEventPublisher;
 import kr.co.mz.agenticai.core.common.event.RagEvent;
+import kr.co.mz.agenticai.core.common.memory.InMemoryMemoryStore;
+import kr.co.mz.agenticai.core.common.memory.MemoryRecord;
 import kr.co.mz.agenticai.core.common.spi.ChunkSink;
 import kr.co.mz.agenticai.core.common.spi.ChunkingStrategy;
+import kr.co.mz.agenticai.core.common.spi.CrossEncoderScorer;
 import kr.co.mz.agenticai.core.common.spi.DocumentReader;
+import kr.co.mz.agenticai.core.common.spi.MemoryStore;
 import kr.co.mz.agenticai.core.common.spi.RagEventPublisher;
 import kr.co.mz.agenticai.core.common.spi.Reranker;
+import kr.co.mz.agenticai.core.common.spi.ToolProvider;
+import kr.co.mz.agenticai.core.common.tool.EmptyToolProvider;
+import org.springframework.ai.tool.ToolCallback;
 import kr.co.mz.agenticai.core.retrieval.bm25.LuceneBm25Index;
 import kr.co.mz.agenticai.core.retrieval.fusion.ResultFusion;
+import kr.co.mz.agenticai.core.retrieval.rerank.CrossEncoderReranker;
+import kr.co.mz.agenticai.core.retrieval.rerank.NoopReranker;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.ko.KoreanAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -88,6 +97,43 @@ class AgenticRagAutoConfigurationTest {
     }
 
     @Test
+    void defaultRerankerIsNoopWhenNoScorerPresent() {
+        runner.run(ctx -> assertThat(ctx.getBean(Reranker.class)).isInstanceOf(NoopReranker.class));
+    }
+
+    @Test
+    void crossEncoderScorerBeanPromotesRerankerToCrossEncoder() {
+        runner.withUserConfiguration(WithCrossEncoderScorer.class).run(ctx ->
+                assertThat(ctx.getBean(Reranker.class)).isInstanceOf(CrossEncoderReranker.class));
+    }
+
+    @Test
+    void defaultMemoryStoreIsInMemory() {
+        runner.run(ctx -> assertThat(ctx.getBean(MemoryStore.class)).isInstanceOf(InMemoryMemoryStore.class));
+    }
+
+    @Test
+    void userBeanOverridesDefaultMemoryStore() {
+        runner.withUserConfiguration(WithCustomMemoryStore.class).run(ctx ->
+                assertThat(ctx.getBean(MemoryStore.class)).isNotInstanceOf(InMemoryMemoryStore.class));
+    }
+
+    @Test
+    void defaultToolProviderIsEmpty() {
+        runner.run(ctx -> {
+            ToolProvider p = ctx.getBean(ToolProvider.class);
+            assertThat(p).isInstanceOf(EmptyToolProvider.class);
+            assertThat(p.tools()).isEmpty();
+        });
+    }
+
+    @Test
+    void userBeanOverridesDefaultToolProvider() {
+        runner.withUserConfiguration(WithCustomToolProvider.class).run(ctx ->
+                assertThat(ctx.getBean(ToolProvider.class)).isNotInstanceOf(EmptyToolProvider.class));
+    }
+
+    @Test
     void userBeanOverridesDefaultRagEventPublisher() {
         runner.withUserConfiguration(CustomPublisherConfig.class).run(ctx -> {
             RagEventPublisher p = ctx.getBean(RagEventPublisher.class);
@@ -137,6 +183,36 @@ class AgenticRagAutoConfigurationTest {
         @Bean
         RagEventPublisher ragEventPublisher() {
             return new CustomPublisher();
+        }
+    }
+
+    @Configuration
+    static class WithCrossEncoderScorer {
+        @Bean
+        CrossEncoderScorer scorer() {
+            return (query, docs) -> docs.stream().map(d -> 0f).toList();
+        }
+    }
+
+    @Configuration
+    static class WithCustomToolProvider {
+        @Bean
+        ToolProvider toolProvider() {
+            return () -> java.util.List.<ToolCallback>of();
+        }
+    }
+
+    @Configuration
+    static class WithCustomMemoryStore {
+        @Bean
+        MemoryStore memoryStore() {
+            return new MemoryStore() {
+                @Override public void append(String conversationId, MemoryRecord record) {}
+                @Override public java.util.List<MemoryRecord> history(String conversationId, int max) {
+                    return java.util.List.of();
+                }
+                @Override public void clear(String conversationId) {}
+            };
         }
     }
 

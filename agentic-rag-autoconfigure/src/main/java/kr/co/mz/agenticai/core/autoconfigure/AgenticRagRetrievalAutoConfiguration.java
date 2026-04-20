@@ -2,6 +2,7 @@ package kr.co.mz.agenticai.core.autoconfigure;
 
 import java.util.List;
 import kr.co.mz.agenticai.core.common.spi.ChunkSink;
+import kr.co.mz.agenticai.core.common.spi.CrossEncoderScorer;
 import kr.co.mz.agenticai.core.common.spi.DocumentSource;
 import kr.co.mz.agenticai.core.common.spi.RagEventPublisher;
 import kr.co.mz.agenticai.core.common.spi.Reranker;
@@ -15,6 +16,7 @@ import kr.co.mz.agenticai.core.retrieval.fusion.ResultFusion;
 import kr.co.mz.agenticai.core.retrieval.query.HydeQueryTransformer;
 import kr.co.mz.agenticai.core.retrieval.query.MultiQueryExpander;
 import kr.co.mz.agenticai.core.retrieval.query.RewriteQueryTransformer;
+import kr.co.mz.agenticai.core.retrieval.rerank.CrossEncoderReranker;
 import kr.co.mz.agenticai.core.retrieval.rerank.NoopReranker;
 import kr.co.mz.agenticai.core.retrieval.source.Bm25DocumentSource;
 import kr.co.mz.agenticai.core.retrieval.source.VectorStoreDocumentSource;
@@ -68,8 +70,9 @@ public class AgenticRagRetrievalAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public Reranker reranker() {
-        return new NoopReranker();
+    public Reranker reranker(ObjectProvider<CrossEncoderScorer> scorerProvider) {
+        CrossEncoderScorer scorer = scorerProvider.getIfAvailable();
+        return scorer != null ? new CrossEncoderReranker(scorer) : new NoopReranker();
     }
 
     // NOTE: no @ConditionalOnBean(ChatModel.class) on query transformers —

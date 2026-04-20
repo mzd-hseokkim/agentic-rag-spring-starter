@@ -48,17 +48,13 @@ public class AgenticRagGuardrailAutoConfiguration { ... }
 
 ## P2 — Phase 2 SPI 확장 후보
 
-설계 문서에 Phase 2로 명시된 SPI들. 현재 미구현 상태가 정상이지만, Phase 2 진입 시 우선순위 검토용 목록.
+설계 문서에 Phase 2로 명시된 SPI들. Extension point만 추가하고 에이전트/파이프라인 wiring은 범위 외.
 
-| SPI | 용도 | 비고 |
-|---|---|---|
-| `ToolProvider` | Spring AI `@Tool` 프로바이더 추상화 | Function Calling 지원 |
-| `MemoryStore` | `ChatMemory` 어댑터 | 다중 백엔드 (Redis/JDBC/InMem) |
-| `ModelRouter` | 다중 LLM 라우팅 | 비용/지연/품질 기반 라우팅 |
-| `KnowledgeGraphRetriever` | Graph 기반 검색 | Neo4j/JanusGraph 등 |
-| `CrossEncoderReranker` | 전용 Cross-encoder 구현 | 현재는 `NoopReranker`만 존재 |
-
-각 항목은 별도 task 파일로 분리하여 진행할 것.
+- [x] **P2-1. `CrossEncoderReranker`** — `CrossEncoderScorer` SPI + reranker 구현. scorer 빈 존재 시 autoconfig가 `Reranker`로 등록 (미존재 시 `NoopReranker` 유지).
+- [x] **P2-2. `MemoryStore`** — 대화 히스토리 추상화 (`append/history/clear`). `InMemoryMemoryStore` 기본 구현. 에이전트 wiring은 범위 외.
+- [x] **P2-3. `ToolProvider`** — Spring AI `ToolCallback` 프로바이더. `EmptyToolProvider` 기본 구현. 에이전트 wiring은 범위 외.
+- [ ] **P2-4. `ModelRouter`** — 다중 LLM 라우팅 (비용/지연/품질 기반). 별도 사이클.
+- [ ] **P2-5. `KnowledgeGraphRetriever`** — Graph 검색 (Neo4j/JanusGraph 등). 별도 사이클.
 
 ---
 
