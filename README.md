@@ -202,6 +202,26 @@ Ollama `qwen3-embedding:4b` + `gpt-oss:20b` 환경에서 전 시나리오 실측
 | Agent iteration 메트릭 | ✅ | `agent.run.iterations` 카운터 정상 등록 |
 | 종합 Micrometer 메트릭 | ✅ | 8개 agentic 메트릭 등록 (ingestion·retrieval·rerank·llm·factcheck·agent) |
 
+## Code Quality (SonarQube)
+
+로컬 SonarQube (`http://localhost:9000`, project key `agentic-rag-spring-starter`) 최신 분석 기준
+(2026-04-20).
+
+| 지표 | 값 |
+|---|---|
+| Quality Gate | ❌ ERROR — `new_coverage` 57.4% (< 80%) 조건 미충족, 나머지 OK |
+| Bugs / Vulnerabilities | 0 / 0 |
+| Code Smells (open) | 4 (MAJOR 2, MINOR 2) |
+| Security Hotspots | 1 (MEDIUM, `MarkdownHeadingChunkingStrategy` S5852 ReDoS) |
+| Reliability / Security / Maintainability | A / A / A |
+| Coverage | 61.3% (line 63.2 / branch 56.5) |
+| Duplication | 1.4% |
+| Tests | 131 (fail 0 / error 0) |
+| NCLOC | 3,977 |
+| Technical Debt | 42분 |
+
+재생성: `./gradlew sonar` 후 Sonar UI 또는 `api/measures/component` · `api/issues/search` 조회.
+
 ## Documentation
 
 - [docs/module-plan-and-design.md](docs/module-plan-and-design.md) — Phase 1 설계 문서 (Phase 2 로드맵 포함)
