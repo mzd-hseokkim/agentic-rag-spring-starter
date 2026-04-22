@@ -22,7 +22,7 @@ public final class MarkdownHeadingChunkingStrategy implements ChunkingStrategy {
 
     public static final String CANONICAL_NAME = "markdown-heading";
 
-    private static final Pattern HEADING = Pattern.compile("^(#{1,6})\\s+(.+?)\\s*$");
+    private static final Pattern HEADING = Pattern.compile("^(#{1,6})[ \\t]++(\\S.*?)[ \\t]*+$");
 
     private final int maxHeadingLevel;
 

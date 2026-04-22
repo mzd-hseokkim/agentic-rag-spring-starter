@@ -20,13 +20,13 @@ public final class InMemoryMemoryStore implements MemoryStore {
     private final ConcurrentMap<String, List<MemoryRecord>> conversations = new ConcurrentHashMap<>();
 
     @Override
-    public void append(String conversationId, MemoryRecord record) {
+    public void append(String conversationId, MemoryRecord entry) {
         Objects.requireNonNull(conversationId, "conversationId");
-        Objects.requireNonNull(record, "record");
+        Objects.requireNonNull(entry, "entry");
         List<MemoryRecord> history = conversations.computeIfAbsent(
                 conversationId, k -> new ArrayList<>());
         synchronized (history) {
-            history.add(record);
+            history.add(entry);
         }
     }
 

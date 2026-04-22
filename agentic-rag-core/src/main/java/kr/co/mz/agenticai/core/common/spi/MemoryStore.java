@@ -14,7 +14,7 @@ import kr.co.mz.agenticai.core.common.memory.MemoryRecord;
  */
 public interface MemoryStore {
 
-    void append(String conversationId, MemoryRecord record);
+    void append(String conversationId, MemoryRecord entry);
 
     /**
      * Returns the most recent messages for the given conversation, ordered

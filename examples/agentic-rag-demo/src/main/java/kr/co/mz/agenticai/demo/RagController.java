@@ -1,5 +1,6 @@
 package kr.co.mz.agenticai.demo;
 
+import java.util.Objects;
 import kr.co.mz.agenticai.core.common.AgenticRagClient;
 import kr.co.mz.agenticai.core.common.IngestionPipeline;
 import kr.co.mz.agenticai.core.common.IngestionRequest;
@@ -88,6 +89,19 @@ public class RagController {
         @Override
         public String getFilename() {
             return filename;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            return this == other
+                    || (other instanceof NamedByteArrayResource r
+                            && super.equals(other)
+                            && Objects.equals(this.filename, r.filename));
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(super.hashCode(), filename);
         }
     }
 
