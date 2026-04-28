@@ -16,6 +16,9 @@ import kr.co.mz.agenticai.core.retrieval.fusion.ReciprocalRankFusion;
 import kr.co.mz.agenticai.core.retrieval.rerank.NoopReranker;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.document.Document;
+import org.springframework.ai.rag.Query;
+import org.springframework.ai.rag.preretrieval.query.expansion.QueryExpander;
+import org.springframework.ai.rag.preretrieval.query.transformation.QueryTransformer;
 
 class HybridRetrieverRouterTest {
 
@@ -87,6 +90,43 @@ class HybridRetrieverRouterTest {
         List<Document> hits = router.retrieve(RetrieverRouter.Query.of("q", 1));
 
         assertThat(hits).hasSize(1);
+    }
+
+    @Test
+    void publishesQueryTransformedForBothTransformerAndExpander() {
+        Document hit = new Document("a", "alpha", Map.of());
+
+        var router = new HybridRetrieverRouter(
+                List.of(constSource("only", hit)),
+                new ReciprocalRankFusion(), new NoopReranker(),
+                new StubTransformer(), new StubExpander(), events, 3);
+
+        router.retrieve(RetrieverRouter.Query.of("원본", 2));
+
+        List<RetrievalEvent.QueryTransformed> transforms = events.events.stream()
+                .filter(RetrievalEvent.QueryTransformed.class::isInstance)
+                .map(RetrievalEvent.QueryTransformed.class::cast)
+                .toList();
+        assertThat(transforms).hasSize(2);
+        assertThat(transforms.get(0).originalQuery()).isEqualTo("원본");
+        assertThat(transforms.get(0).transformedQueries()).containsExactly("정제된 질문");
+        assertThat(transforms.get(0).transformer()).isEqualTo("StubTransformer");
+        assertThat(transforms.get(1).originalQuery()).isEqualTo("원본");
+        assertThat(transforms.get(1).transformedQueries())
+                .containsExactly("정제된 질문", "변형 1", "변형 2");
+        assertThat(transforms.get(1).transformer()).isEqualTo("StubExpander");
+    }
+
+    private static final class StubTransformer implements QueryTransformer {
+        @Override public Query transform(Query q) { return q.mutate().text("정제된 질문").build(); }
+    }
+
+    private static final class StubExpander implements QueryExpander {
+        @Override public List<Query> expand(Query q) {
+            return List.of(q,
+                    q.mutate().text("변형 1").build(),
+                    q.mutate().text("변형 2").build());
+        }
     }
 
     @Test
