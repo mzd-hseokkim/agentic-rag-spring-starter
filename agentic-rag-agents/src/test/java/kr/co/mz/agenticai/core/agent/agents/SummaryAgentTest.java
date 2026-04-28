@@ -130,10 +130,11 @@ class SummaryAgentTest {
     @Test
     void nullAnswerIsNormalisedToEmpty() {
         ChatModel chat = mock(ChatModel.class);
-        Generation gen = new Generation(new AssistantMessage((String) null));
-        when(chat.call(any(Prompt.class))).thenReturn(new ChatResponse(List.of(gen)));
+        AssistantMessage msg = mock(AssistantMessage.class);
+        when(msg.getText()).thenReturn(null);
+        when(chat.call(any(Prompt.class))).thenReturn(new ChatResponse(List.of(new Generation(msg))));
 
-        var agent = new SummaryAgent(chat, (ToolProvider) null, null);
+        var agent = new SummaryAgent(chat);
         AgentContext ctx = contextWith("질문", null);
         agent.execute(ctx);
 
