@@ -66,11 +66,13 @@ public class AgenticRagAgentsAutoConfiguration {
     public Agent summaryAgent(
             ChatModel chatModel,
             ObjectProvider<ToolProvider> toolProvider,
-            ObjectProvider<MemoryStore> memoryStore) {
+            ObjectProvider<MemoryStore> memoryStore,
+            AgenticRagProperties props) {
         return new SummaryAgent(
                 chatModel,
                 toolProvider.getIfAvailable(),
-                memoryStore.getIfAvailable());
+                memoryStore.getIfAvailable(),
+                props.getMemory().getHistoryLimit());
     }
 
     @Bean(name = "validationAgent")

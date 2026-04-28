@@ -1,3 +1,4 @@
+kr.co.mz.agenticai.core.autoconfigure.AgenticRagMemoryAutoConfiguration
 kr.co.mz.agenticai.core.autoconfigure.AgenticRagCoreAutoConfiguration
 kr.co.mz.agenticai.core.autoconfigure.AgenticRagGuardrailAutoConfiguration
 kr.co.mz.agenticai.core.autoconfigure.AgenticRagRetrievalAutoConfiguration

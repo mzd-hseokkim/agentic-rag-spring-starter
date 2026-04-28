@@ -53,9 +53,14 @@ public final class SummaryAgent implements Agent {
     }
 
     public SummaryAgent(ChatModel chatModel, ToolProvider toolProvider, MemoryStore memoryStore) {
+        this(chatModel, toolProvider, memoryStore, DEFAULT_HISTORY_LIMIT);
+    }
+
+    public SummaryAgent(
+            ChatModel chatModel, ToolProvider toolProvider, MemoryStore memoryStore, int historyLimit) {
         this(chatModel, toolProvider, memoryStore,
                 KoreanAgentPrompts.SUMMARY_SYSTEM, KoreanAgentPrompts.SUMMARY_USER,
-                DEFAULT_HISTORY_LIMIT);
+                historyLimit);
     }
 
     public SummaryAgent(

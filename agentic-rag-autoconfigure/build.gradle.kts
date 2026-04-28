@@ -9,7 +9,12 @@ dependencies {
     api(rootProject.libs.micrometer.core)
     annotationProcessor(rootProject.libs.spring.boot.configuration.processor)
 
+    compileOnly(rootProject.libs.spring.boot.starter.data.redis)
+
     testImplementation(rootProject.libs.spring.boot.starter.test)
+    testImplementation(rootProject.libs.spring.boot.starter.data.redis)
+    testImplementation(platform(rootProject.libs.testcontainers.bom))
+    testImplementation(rootProject.libs.testcontainers.junit)
     testImplementation("org.springframework.ai:spring-ai-ollama")
     testImplementation("org.springframework.ai:spring-ai-vector-store")
 }

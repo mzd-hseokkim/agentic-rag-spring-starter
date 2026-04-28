@@ -1,5 +1,6 @@
 package kr.co.mz.agenticai.core.autoconfigure;
 
+import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /** Configuration properties bound to the {@code agentic-rag.*} namespace. */
@@ -205,6 +206,39 @@ public class AgenticRagProperties {
         public void setPromptInjection(Toggle v) { this.promptInjection = v; }
         public Toggle getLogging() { return logging; }
         public void setLogging(Toggle v) { this.logging = v; }
+    }
+
+    private Memory memory = new Memory();
+    public Memory getMemory() { return memory; }
+    public void setMemory(Memory v) { this.memory = v; }
+
+    public static class Memory {
+        private boolean enabled = true;
+        /** Number of past messages prefixed to each LLM call. */
+        private int historyLimit = 10;
+        private Redis redis = new Redis();
+
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean v) { this.enabled = v; }
+        public int getHistoryLimit() { return historyLimit; }
+        public void setHistoryLimit(int v) { this.historyLimit = v; }
+        public Redis getRedis() { return redis; }
+        public void setRedis(Redis v) { this.redis = v; }
+    }
+
+    public static class Redis {
+        /** Activates the Redis-backed store when Spring Data Redis is on the classpath. */
+        private boolean enabled = true;
+        private String keyPrefix = "agentic-rag:memory:";
+        /** Per-conversation TTL refreshed on every append; null disables expiry. */
+        private Duration ttl = Duration.ofHours(24);
+
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean v) { this.enabled = v; }
+        public String getKeyPrefix() { return keyPrefix; }
+        public void setKeyPrefix(String v) { this.keyPrefix = v; }
+        public Duration getTtl() { return ttl; }
+        public void setTtl(Duration v) { this.ttl = v; }
     }
 
     private Observability observability = new Observability();
