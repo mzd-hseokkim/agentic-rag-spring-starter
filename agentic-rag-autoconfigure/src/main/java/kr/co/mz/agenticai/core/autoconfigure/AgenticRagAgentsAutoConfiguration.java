@@ -13,8 +13,10 @@ import kr.co.mz.agenticai.core.common.AgenticRagClient;
 import kr.co.mz.agenticai.core.common.spi.Agent;
 import kr.co.mz.agenticai.core.common.spi.AgentOrchestrator;
 import kr.co.mz.agenticai.core.common.spi.FactChecker;
+import kr.co.mz.agenticai.core.common.spi.MemoryStore;
 import kr.co.mz.agenticai.core.common.spi.RagEventPublisher;
 import kr.co.mz.agenticai.core.common.spi.RetrieverRouter;
+import kr.co.mz.agenticai.core.common.spi.ToolProvider;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -61,8 +63,14 @@ public class AgenticRagAgentsAutoConfiguration {
 
     @Bean(name = "summaryAgent")
     @ConditionalOnMissingBean(name = "summaryAgent")
-    public Agent summaryAgent(ChatModel chatModel) {
-        return new SummaryAgent(chatModel);
+    public Agent summaryAgent(
+            ChatModel chatModel,
+            ObjectProvider<ToolProvider> toolProvider,
+            ObjectProvider<MemoryStore> memoryStore) {
+        return new SummaryAgent(
+                chatModel,
+                toolProvider.getIfAvailable(),
+                memoryStore.getIfAvailable());
     }
 
     @Bean(name = "validationAgent")
