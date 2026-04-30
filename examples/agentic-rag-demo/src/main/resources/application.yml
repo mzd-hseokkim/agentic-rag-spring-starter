@@ -9,6 +9,11 @@ spring:
     client:
       connect-timeout: 30s
       read-timeout: 5m
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2s
   ai:
     ollama:
       base-url: http://localhost:11434
@@ -35,6 +40,13 @@ agentic-rag:
   # agents.enabled=true 로 바꾸면 6-agent 오케스트레이션 모드로 전환됨.
   agents:
     enabled: false
+  memory:
+    history-limit: 6
+    redis:
+      key-prefix: "agentic-rag-demo:memory:"
+      ttl: 1h
+  tools:
+    enabled: true
 
 management:
   endpoints:

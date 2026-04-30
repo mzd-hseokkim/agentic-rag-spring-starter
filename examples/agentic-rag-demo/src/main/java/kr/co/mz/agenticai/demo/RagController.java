@@ -57,10 +57,14 @@ public class RagController {
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
-    /** Synchronous RAG ask. */
+    /** Synchronous RAG ask. {@code sessionId} (optional) drives the memory store. */
     @PostMapping("/ask")
     public Mono<RagResponse> ask(@RequestBody AskBody body) {
-        return Mono.fromCallable(() -> client.ask(RagRequest.of(body.query())))
+        RagRequest req = RagRequest.builder()
+                .query(body.query())
+                .sessionId(body.sessionId())
+                .build();
+        return Mono.fromCallable(() -> client.ask(req))
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -105,7 +109,7 @@ public class RagController {
         }
     }
 
-    public record AskBody(String query) {}
+    public record AskBody(String query, String sessionId) {}
 
     public record UrlBody(String url) {
         public UrlBody {

@@ -10,6 +10,10 @@
   ollama pull qwen3-embedding:4b
   ollama pull gpt-oss:20b
   ```
+- **Redis** (localhost:6379) — 대화 메모리 E2E 검증용. 가장 간단한 띄우기:
+  ```bash
+  docker run --rm -d --name agentic-rag-redis -p 6379:6379 redis:7-alpine
+  ```
 - JDK 21 (Gradle이 toolchain으로 자동 다운로드하므로 시스템 설치 불요)
 
 ## 실행
@@ -70,6 +74,61 @@ curl -X POST http://localhost:8080/ingest/url \
 curl http://localhost:8080/actuator/metrics/agentic.rag.llm.duration
 curl http://localhost:8080/actuator/metrics/agentic.rag.retrieval.hits
 ```
+
+### 5. Phase 2 기능 E2E
+
+`MemoryStore` 와 `ToolProvider` 는 `SummaryAgent` (오케스트레이션 모드)에서 사용되므로,
+이 절의 시나리오는 `tools` 프로필(=`agents.enabled=true`)로 실행한다:
+
+```bash
+./gradlew :examples:agentic-rag-demo:bootRun -Pprofile=tools
+```
+
+#### Redis 기반 대화 메모리
+
+`sessionId` 를 같은 값으로 두 번 호출하면 두 번째 호출이 첫 번째의 맥락을 이어받는다.
+Redis에는 `agentic-rag-demo:memory:<sessionId>` 키가 LIST 형태로 쌓이고 1시간 TTL이 갱신된다.
+
+```bash
+# 1) 첫 질의 — 사용자 정보 등록
+curl -sS -X POST http://localhost:8080/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"내 이름은 홍길동입니다.","sessionId":"demo-1"}' | jq .answer
+
+# 2) 같은 세션으로 후속 질의 — 첫 메시지를 기억해야 함
+curl -sS -X POST http://localhost:8080/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"방금 알려준 내 이름이 뭐였죠?","sessionId":"demo-1"}' | jq .answer
+
+# 3) Redis 키 확인
+docker exec -it agentic-rag-redis redis-cli KEYS 'agentic-rag-demo:memory:*'
+docker exec -it agentic-rag-redis redis-cli LRANGE agentic-rag-demo:memory:demo-1 0 -1
+docker exec -it agentic-rag-redis redis-cli TTL  agentic-rag-demo:memory:demo-1
+```
+
+기대 결과:
+- (2) 응답에 "홍길동" 포함
+- `KEYS` 가 `demo-1` 항목을 보여주고, `LRANGE` 결과는 USER/ASSISTANT 메시지 4건 (각 라운드 입출력 한 쌍)
+- `TTL` ≈ 3600초 이하 (각 append 시 1h로 갱신됨)
+
+#### `@Tool` 카탈로그 기반 tool calling
+
+`DemoTools.currentTimeKst()` 가 `@Tool` 메서드로 노출되어 있고,
+스타터의 `CatalogToolProvider` 가 자동 집계한다.
+
+```bash
+# 시간을 묻는 질의
+curl -sS -X POST http://localhost:8080/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"지금 한국 시간 알려줘.","sessionId":"demo-tool"}' | jq .answer
+```
+
+기대 결과:
+- 데모 로그에 `[tool] currentTimeKst() = 2026-04-30 15:23:11` 같은 라인이 출력
+- 응답에 같은 시각 문자열이 포함
+
+차단 동작 확인은 `application.yml` (또는 `application-tools.yml`) 에
+`agentic-rag.tools.denied-names: [currentTimeKst]` 를 추가하고 재시작 — 같은 질의에서 도구가 호출되지 않는다.
 
 ## 설정 변경
 
