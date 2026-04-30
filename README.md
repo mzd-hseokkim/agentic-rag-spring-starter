@@ -6,8 +6,12 @@ Micrometer 메트릭까지 전부 자동 구성된다.
 
 ## Status
 
-**Phase 1 (MVP) 완료.** 125개 테스트 통과, Ollama 로컬 환경에서 12개 시나리오 end-to-end 실측 검증 완료.
-Phase 2는 Tool calling / MCP / semantic cache / cross-encoder reranker 등 (하단 로드맵).
+**Phase 1 (MVP) 완료.** Ollama 로컬 환경에서 12개 시나리오 end-to-end 실측 검증 완료.
+
+**Phase 2 진행 중.**
+- ✅ Tool calling — `@Tool` / MCP `ToolCallbackProvider` 빈을 자동 집계하는 `CatalogToolProvider`
+- ✅ Conversational memory — JSON-LIST 기반 `RedisMemoryStore` + TTL
+- ⏳ Cross-encoder reranker, semantic cache, graph retrieval, CRAG 등 (하단 로드맵)
 
 ## Features
 
@@ -26,6 +30,10 @@ Phase 2는 Tool calling / MCP / semantic cache / cross-encoder reranker 등 (하
   토큰 단위 이벤트 발행
 - **Eventing** — Ingestion / Retrieval / LLM / FactCheck / Agent 모든 단계에서 `RagEvent` 발행.
   기본 `ApplicationEventPublisher` 어댑터 + 사용자가 Kafka/HTTP 등 구현체 등록 가능
+- **Conversational Memory** — `MemoryStore` SPI. 기본은 in-memory, classpath에 Spring Data Redis
+  존재 시 JSON-LIST 기반 Redis 구현체로 자동 교체 (TTL · key prefix 설정)
+- **Tool Calling** — `ToolProvider` SPI. `@Tool` 빈 / MCP tool source 등 모든
+  `ToolCallbackProvider`를 카탈로그로 집계, 이름 기반 allow/deny 필터 지원
 - **Observability** — Micrometer 메트릭 (MeterRegistry 존재 시 자동). OTel 트레이싱은
   `micrometer-tracing-bridge-otel` 추가 시 자동 연계
 
@@ -73,6 +81,16 @@ agentic-rag:
     min-confidence: 0.5
   agents:
     enabled: false                    # true 면 6-agent 오케스트레이션으로 전환
+  memory:
+    history-limit: 10                 # SummaryAgent에 prefix 되는 과거 메시지 수
+    redis:
+      enabled: true                   # Spring Data Redis 가 classpath에 있을 때 자동 활성
+      key-prefix: "agentic-rag:memory:"
+      ttl: 24h                        # 대화별 TTL (append 시 갱신)
+  tools:
+    enabled: true                     # ToolCallbackProvider 빈을 모아 자동 노출
+    allowed-names: []                 # 비어있으면 전체 허용
+    denied-names: []                  # 차단할 도구 이름
   guardrails:
     pii-mask:         { enabled: true }
     prompt-injection: { enabled: true }
@@ -154,6 +172,8 @@ class MyService {
 | `DocumentSource` | 검색 백엔드 추가 (graph retriever, 외부 검색엔진, ...) |
 | `ResultFusion` | 융합 전략 |
 | `Reranker` | 재랭킹 모델 (cross-encoder, LLM, ...) |
+| `MemoryStore` | 대화 히스토리 저장 (in-memory / Redis 기본 제공, JDBC 등 추가 가능) |
+| `ToolProvider` | LLM에게 노출할 도구 카탈로그 (Spring AI `@Tool` / MCP 자동 집계) |
 | `Guardrail` | 입/출력 필터 |
 | `RagEventPublisher` | 이벤트 외부 전달 (Kafka / HTTP / Slack) |
 | `FactChecker` | 답변 검증 전략 |
@@ -213,12 +233,13 @@ Ollama `qwen3-embedding:4b` + `gpt-oss:20b` 환경에서 전 시나리오 실측
 
 ### Phase 2 — 고급 RAG 패턴
 
-- Tool calling (Spring AI `@Tool`) + MCP client 통합
+- ✅ Tool calling — `CatalogToolProvider` (Spring AI `@Tool` + MCP `ToolCallbackProvider` 집계)
+- ✅ `MemoryStore` Redis 구현체 (`RedisMemoryStore`, JSON-LIST + TTL)
 - Semantic / prompt caching
 - Cross-encoder Reranker (ONNX Runtime)
 - Graph retrieval (Neo4j 어댑터)
 - Corrective RAG (CRAG) / Adaptive RAG
-- `MemoryStore` JDBC / Redis 구현체
+- `MemoryStore` JDBC 구현체
 - Kafka `RagEventPublisher` 레퍼런스 구현
 - Multi-tenancy (namespace / 권한 필터)
 - Cost tracker + rate-limit guardrail
