@@ -186,12 +186,27 @@ public class AgenticRagProperties {
         private boolean enabled = false;
         private int maxIterations = 2;
         private int maxSources = 5;
+        private Summary summary = new Summary();
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean v) { this.enabled = v; }
         public int getMaxIterations() { return maxIterations; }
         public void setMaxIterations(int v) { this.maxIterations = v; }
         public int getMaxSources() { return maxSources; }
         public void setMaxSources(int v) { this.maxSources = v; }
+        public Summary getSummary() { return summary; }
+        public void setSummary(Summary v) { this.summary = v; }
+    }
+
+    public static class Summary {
+        /** Override for {@code SummaryAgent}'s system prompt; null/blank uses the bundled Korean default. */
+        private String systemPrompt;
+        /** Override for {@code SummaryAgent}'s user prompt template; null/blank uses the bundled Korean default.
+         * Custom values must contain both {@code {query}} and {@code {sources}} placeholders. */
+        private String userPromptTemplate;
+        public String getSystemPrompt() { return systemPrompt; }
+        public void setSystemPrompt(String v) { this.systemPrompt = v; }
+        public String getUserPromptTemplate() { return userPromptTemplate; }
+        public void setUserPromptTemplate(String v) { this.userPromptTemplate = v; }
     }
 
     private Guardrails guardrails = new Guardrails();

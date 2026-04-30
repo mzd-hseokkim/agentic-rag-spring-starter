@@ -4,6 +4,7 @@ import java.util.List;
 import kr.co.mz.agenticai.core.agent.agents.DataConstructionAgent;
 import kr.co.mz.agenticai.core.agent.agents.IntentAnalysisAgent;
 import kr.co.mz.agenticai.core.agent.agents.InterpretationAgent;
+import kr.co.mz.agenticai.core.agent.agents.KoreanAgentPrompts;
 import kr.co.mz.agenticai.core.agent.agents.RetrievalAgent;
 import kr.co.mz.agenticai.core.agent.agents.SummaryAgent;
 import kr.co.mz.agenticai.core.agent.agents.ValidationAgent;
@@ -68,11 +69,22 @@ public class AgenticRagAgentsAutoConfiguration {
             ObjectProvider<ToolProvider> toolProvider,
             ObjectProvider<MemoryStore> memoryStore,
             AgenticRagProperties props) {
+        AgenticRagProperties.Summary cfg = props.getAgents().getSummary();
+        String systemPrompt = blankToNull(cfg.getSystemPrompt()) != null
+                ? cfg.getSystemPrompt() : KoreanAgentPrompts.SUMMARY_SYSTEM;
+        String userTemplate = blankToNull(cfg.getUserPromptTemplate()) != null
+                ? cfg.getUserPromptTemplate() : KoreanAgentPrompts.SUMMARY_USER;
         return new SummaryAgent(
                 chatModel,
                 toolProvider.getIfAvailable(),
                 memoryStore.getIfAvailable(),
+                systemPrompt,
+                userTemplate,
                 props.getMemory().getHistoryLimit());
+    }
+
+    private static String blankToNull(String s) {
+        return (s == null || s.isBlank()) ? null : s;
     }
 
     @Bean(name = "validationAgent")
