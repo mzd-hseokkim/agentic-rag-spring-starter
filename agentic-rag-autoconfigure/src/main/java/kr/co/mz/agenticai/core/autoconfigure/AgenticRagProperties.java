@@ -1,6 +1,8 @@
 package kr.co.mz.agenticai.core.autoconfigure;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /** Configuration properties bound to the {@code agentic-rag.*} namespace. */
@@ -211,6 +213,29 @@ public class AgenticRagProperties {
     private Memory memory = new Memory();
     public Memory getMemory() { return memory; }
     public void setMemory(Memory v) { this.memory = v; }
+
+    private Tools tools = new Tools();
+    public Tools getTools() { return tools; }
+    public void setTools(Tools v) { this.tools = v; }
+
+    public static class Tools {
+        private boolean enabled = true;
+        /** When non-empty, only tools whose name appears here are exposed. */
+        private List<String> allowedNames = new ArrayList<>();
+        /** Tools whose name appears here are excluded even if allowed. */
+        private List<String> deniedNames = new ArrayList<>();
+
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean v) { this.enabled = v; }
+        public List<String> getAllowedNames() { return allowedNames; }
+        public void setAllowedNames(List<String> v) {
+            this.allowedNames = v == null ? new ArrayList<>() : v;
+        }
+        public List<String> getDeniedNames() { return deniedNames; }
+        public void setDeniedNames(List<String> v) {
+            this.deniedNames = v == null ? new ArrayList<>() : v;
+        }
+    }
 
     public static class Memory {
         private boolean enabled = true;
