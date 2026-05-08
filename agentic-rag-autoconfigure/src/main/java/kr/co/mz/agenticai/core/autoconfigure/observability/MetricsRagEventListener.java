@@ -76,6 +76,21 @@ public class MetricsRagEventListener {
                             "kind", "completion")
                     .record(event.completionTokens());
         }
+        if (event.promptTokens() > 0) {
+            registry.summary(M_LLM_TOKENS,
+                            TAG_PROVIDER, nullSafe(event.provider()),
+                            TAG_MODEL, nullSafe(event.model()),
+                            "kind", "prompt")
+                    .record(event.promptTokens());
+        }
+        long totalTokens = event.promptTokens() + event.completionTokens();
+        if (totalTokens > 0) {
+            registry.summary(M_LLM_TOKENS,
+                            TAG_PROVIDER, nullSafe(event.provider()),
+                            TAG_MODEL, nullSafe(event.model()),
+                            "kind", "total")
+                    .record(totalTokens);
+        }
     }
 
     @EventListener
