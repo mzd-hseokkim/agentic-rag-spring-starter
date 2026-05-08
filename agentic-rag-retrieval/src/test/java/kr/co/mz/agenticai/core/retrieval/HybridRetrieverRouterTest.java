@@ -2,6 +2,10 @@ package kr.co.mz.agenticai.core.retrieval;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,10 +14,14 @@ import kr.co.mz.agenticai.core.common.event.RagEvent;
 import kr.co.mz.agenticai.core.common.event.RetrievalEvent;
 import kr.co.mz.agenticai.core.common.spi.DocumentSource;
 import kr.co.mz.agenticai.core.common.spi.RagEventPublisher;
+import kr.co.mz.agenticai.core.common.spi.RetrievalEvaluator.Action;
 import kr.co.mz.agenticai.core.common.spi.Reranker;
 import kr.co.mz.agenticai.core.common.spi.RetrieverRouter;
+import kr.co.mz.agenticai.core.retrieval.evaluate.PassThroughRetrievalEvaluator;
+import kr.co.mz.agenticai.core.retrieval.evaluate.ScoreThresholdEvaluator;
 import kr.co.mz.agenticai.core.retrieval.fusion.ReciprocalRankFusion;
 import kr.co.mz.agenticai.core.retrieval.rerank.NoopReranker;
+import kr.co.mz.agenticai.core.retrieval.RetrievalMetadata;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.rag.Query;
@@ -23,6 +31,7 @@ import org.springframework.ai.rag.preretrieval.query.transformation.QueryTransfo
 class HybridRetrieverRouterTest {
 
     private final CapturingPublisher events = new CapturingPublisher();
+    private final PassThroughRetrievalEvaluator passThrough = new PassThroughRetrievalEvaluator();
 
     @Test
     void rejectsEmptySourcesAndBadOverscan() {
@@ -30,12 +39,12 @@ class HybridRetrieverRouterTest {
         var fusion = new ReciprocalRankFusion();
         var reranker = new NoopReranker();
         assertThatThrownBy(() -> new HybridRetrieverRouter(
-                emptySources, fusion, reranker, null, null, events, 3))
+                emptySources, fusion, reranker, passThrough, null, null, events, 3))
                 .isInstanceOf(IllegalArgumentException.class);
 
         var oneSource = List.of(constSource("a", new Document("d", "x", Map.of())));
         assertThatThrownBy(() -> new HybridRetrieverRouter(
-                oneSource, fusion, reranker, null, null, events, 0))
+                oneSource, fusion, reranker, passThrough, null, null, events, 0))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -46,7 +55,7 @@ class HybridRetrieverRouterTest {
 
         var router = new HybridRetrieverRouter(
                 List.of(constSource("only", a, b)),
-                new ReciprocalRankFusion(), new NoopReranker(),
+                new ReciprocalRankFusion(), new NoopReranker(), passThrough,
                 null, null, events, 3);
 
         List<Document> hits = router.retrieve(RetrieverRouter.Query.of("anything", 2));
@@ -68,7 +77,7 @@ class HybridRetrieverRouterTest {
         // src1: a, b      src2: c, a   → a appears in both → wins under RRF
         var router = new HybridRetrieverRouter(
                 List.of(constSource("v", a, b), constSource("k", c, a)),
-                new ReciprocalRankFusion(), new NoopReranker(),
+                new ReciprocalRankFusion(), new NoopReranker(), passThrough,
                 null, null, events, 3);
 
         List<Document> hits = router.retrieve(RetrieverRouter.Query.of("q", 3));
@@ -84,7 +93,7 @@ class HybridRetrieverRouterTest {
 
         var router = new HybridRetrieverRouter(
                 List.of(constSource("only", a, b, c)),
-                new ReciprocalRankFusion(), new NoopReranker(),
+                new ReciprocalRankFusion(), new NoopReranker(), passThrough,
                 null, null, events, 3);
 
         List<Document> hits = router.retrieve(RetrieverRouter.Query.of("q", 1));
@@ -98,7 +107,7 @@ class HybridRetrieverRouterTest {
 
         var router = new HybridRetrieverRouter(
                 List.of(constSource("only", hit)),
-                new ReciprocalRankFusion(), new NoopReranker(),
+                new ReciprocalRankFusion(), new NoopReranker(), passThrough,
                 new StubTransformer(), new StubExpander(), events, 3);
 
         router.retrieve(RetrieverRouter.Query.of("원본", 2));
@@ -133,11 +142,66 @@ class HybridRetrieverRouterTest {
     void emptySourceResultsAreSkipped() {
         var router = new HybridRetrieverRouter(
                 List.of(constSource("empty"), constSource("only", new Document("a", "alpha", Map.of()))),
-                new ReciprocalRankFusion(), new NoopReranker(),
+                new ReciprocalRankFusion(), new NoopReranker(), passThrough,
                 null, null, events, 3);
 
         List<Document> hits = router.retrieve(RetrieverRouter.Query.of("q", 5));
         assertThat(hits).hasSize(1);
+    }
+
+    // T4: evaluator is called exactly once; EvaluationCompleted event is published
+    @Test
+    void evaluatorCalledOnceAndEventPublished() {
+        Document doc = new Document("a", "alpha", Map.of(RetrievalMetadata.FUSED_SCORE, 0.8));
+        PassThroughRetrievalEvaluator evaluatorSpy = spy(new PassThroughRetrievalEvaluator());
+
+        var router = new HybridRetrieverRouter(
+                List.of(constSource("only", doc)),
+                new ReciprocalRankFusion(), new NoopReranker(), evaluatorSpy,
+                null, null, events, 3);
+
+        router.retrieveWithDecision(RetrieverRouter.Query.of("q", 1));
+
+        verify(evaluatorSpy, times(1)).evaluate(any(), any());
+        assertThat(events.events)
+                .hasAtLeastOneElementOfType(RetrievalEvent.EvaluationCompleted.class);
+    }
+
+    // T6: retrieveWithDecision returns RetrievalOutcome with Decision; retrieve returns same docs
+    @Test
+    void retrieveWithDecisionContainsDecisionAndDocuments() {
+        Document doc = new Document("a", "alpha", Map.of());
+
+        var router = new HybridRetrieverRouter(
+                List.of(constSource("only", doc)),
+                new ReciprocalRankFusion(), new NoopReranker(), passThrough,
+                null, null, events, 3);
+
+        RetrieverRouter.Query query = RetrieverRouter.Query.of("q", 1);
+        RetrievalOutcome outcome = router.retrieveWithDecision(query);
+        List<Document> retrieveDocs = router.retrieve(query);
+
+        assertThat(outcome.decision().action()).isEqualTo(Action.ACCEPT);
+        assertThat(outcome.documents()).extracting(Document::getId).containsExactly("a");
+        assertThat(retrieveDocs).extracting(Document::getId).containsExactly("a");
+    }
+
+    // T6b: ScoreThresholdEvaluator below-threshold path via retrieveWithDecision
+    @Test
+    void retrieveWithDecisionReturnsRetryWhenScoreBelowThreshold() {
+        // RRF score for single-source single-doc ≈ 1/(60+1) which is below 0.5
+        Document doc = new Document("b", "beta", Map.of());
+        var evaluator = new ScoreThresholdEvaluator(0.5);
+
+        var router = new HybridRetrieverRouter(
+                List.of(constSource("only", doc)),
+                new ReciprocalRankFusion(), new NoopReranker(), evaluator,
+                null, null, events, 3);
+
+        RetrievalOutcome outcome = router.retrieveWithDecision(RetrieverRouter.Query.of("q", 1));
+
+        assertThat(outcome.decision().action()).isEqualTo(Action.RETRY);
+        assertThat(outcome.documents()).extracting(Document::getId).containsExactly("b");
     }
 
     private static DocumentSource constSource(String name, Document... docs) {

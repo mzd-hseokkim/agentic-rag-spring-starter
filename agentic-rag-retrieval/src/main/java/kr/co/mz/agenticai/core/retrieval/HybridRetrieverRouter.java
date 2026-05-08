@@ -9,6 +9,7 @@ import kr.co.mz.agenticai.core.common.event.RetrievalEvent;
 import kr.co.mz.agenticai.core.common.spi.DocumentSource;
 import kr.co.mz.agenticai.core.common.spi.RagEventPublisher;
 import kr.co.mz.agenticai.core.common.spi.Reranker;
+import kr.co.mz.agenticai.core.common.spi.RetrievalEvaluator;
 import kr.co.mz.agenticai.core.common.spi.RetrieverRouter;
 import kr.co.mz.agenticai.core.retrieval.fusion.ResultFusion;
 import org.springframework.ai.document.Document;
@@ -39,6 +40,7 @@ public final class HybridRetrieverRouter implements RetrieverRouter {
     private final List<DocumentSource> sources;
     private final ResultFusion fusion;
     private final Reranker reranker;
+    private final RetrievalEvaluator evaluator;
     private final QueryTransformer queryTransformer;
     private final QueryExpander queryExpander;
     private final RagEventPublisher events;
@@ -48,6 +50,7 @@ public final class HybridRetrieverRouter implements RetrieverRouter {
             List<DocumentSource> sources,
             ResultFusion fusion,
             Reranker reranker,
+            RetrievalEvaluator evaluator,
             QueryTransformer queryTransformer,
             QueryExpander queryExpander,
             RagEventPublisher events,
@@ -61,6 +64,7 @@ public final class HybridRetrieverRouter implements RetrieverRouter {
         this.sources = List.copyOf(sources);
         this.fusion = Objects.requireNonNull(fusion, "fusion");
         this.reranker = Objects.requireNonNull(reranker, "reranker");
+        this.evaluator = Objects.requireNonNull(evaluator, "evaluator");
         this.queryTransformer = queryTransformer;
         this.queryExpander = queryExpander;
         this.events = Objects.requireNonNull(events, "events");
@@ -69,6 +73,21 @@ public final class HybridRetrieverRouter implements RetrieverRouter {
 
     @Override
     public List<Document> retrieve(Query routerQuery) {
+        return doRetrieve(routerQuery).documents();
+    }
+
+    /**
+     * Retrieves documents and exposes the {@link RetrievalEvaluator}'s verdict
+     * as a {@link RetrievalOutcome}. Callers that want to branch on the decision
+     * (RETRY / FALLBACK / ABSTAIN) should use this method instead of
+     * {@link #retrieve}.
+     */
+    public RetrievalOutcome retrieveWithDecision(Query query) {
+        Objects.requireNonNull(query, "query");
+        return doRetrieve(query);
+    }
+
+    private RetrievalOutcome doRetrieve(Query routerQuery) {
         Objects.requireNonNull(routerQuery, "query");
         long started = System.currentTimeMillis();
         String correlationId = UUID.randomUUID().toString();
@@ -123,6 +142,16 @@ public final class HybridRetrieverRouter implements RetrieverRouter {
                 System.currentTimeMillis() - rerankStarted,
                 Instant.now(), correlationId));
 
-        return reranked;
+        long evalStarted = System.currentTimeMillis();
+        RetrievalEvaluator.Decision decision = evaluator.evaluate(routerQuery, reranked);
+        events.publish(new RetrievalEvent.EvaluationCompleted(
+                decision.action(),
+                decision.score(),
+                evaluator.getClass().getSimpleName(),
+                System.currentTimeMillis() - evalStarted,
+                Instant.now(),
+                correlationId));
+
+        return new RetrievalOutcome(reranked, decision);
     }
 }

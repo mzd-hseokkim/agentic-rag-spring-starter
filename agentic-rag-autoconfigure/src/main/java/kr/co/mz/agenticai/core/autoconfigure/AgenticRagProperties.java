@@ -118,6 +118,7 @@ public class AgenticRagProperties {
         private int overscanFactor = 3;
         private Bm25 bm25 = new Bm25();
         private QueryTransform query = new QueryTransform();
+        private Evaluator evaluator = new Evaluator();
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean v) { this.enabled = v; }
         public int getOverscanFactor() { return overscanFactor; }
@@ -126,6 +127,23 @@ public class AgenticRagProperties {
         public void setBm25(Bm25 v) { this.bm25 = v; }
         public QueryTransform getQuery() { return query; }
         public void setQuery(QueryTransform v) { this.query = v; }
+        public Evaluator getEvaluator() { return evaluator; }
+        public void setEvaluator(Evaluator v) { this.evaluator = v; }
+    }
+
+    public static class Evaluator {
+        /** When false (default), a {@link kr.co.mz.agenticai.core.retrieval.evaluate.PassThroughRetrievalEvaluator} is used. */
+        private boolean enabled = false;
+        /** Minimum fused score [0.0, 1.0] for the score-threshold strategy. */
+        private double minScore = 0.5;
+        /** Evaluation strategy: {@code pass-through} or {@code score-threshold}. */
+        private String strategy = "pass-through";
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean v) { this.enabled = v; }
+        public double getMinScore() { return minScore; }
+        public void setMinScore(double v) { this.minScore = v; }
+        public String getStrategy() { return strategy; }
+        public void setStrategy(String v) { this.strategy = v; }
     }
 
     public static class QueryTransform {

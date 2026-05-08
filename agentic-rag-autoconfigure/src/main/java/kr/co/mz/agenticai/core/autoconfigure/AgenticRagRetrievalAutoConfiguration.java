@@ -6,7 +6,10 @@ import kr.co.mz.agenticai.core.common.spi.CrossEncoderScorer;
 import kr.co.mz.agenticai.core.common.spi.DocumentSource;
 import kr.co.mz.agenticai.core.common.spi.RagEventPublisher;
 import kr.co.mz.agenticai.core.common.spi.Reranker;
+import kr.co.mz.agenticai.core.common.spi.RetrievalEvaluator;
 import kr.co.mz.agenticai.core.common.spi.RetrieverRouter;
+import kr.co.mz.agenticai.core.retrieval.evaluate.PassThroughRetrievalEvaluator;
+import kr.co.mz.agenticai.core.retrieval.evaluate.ScoreThresholdEvaluator;
 import kr.co.mz.agenticai.core.retrieval.HybridRetrieverRouter;
 import kr.co.mz.agenticai.core.retrieval.bm25.Bm25ChunkSink;
 import kr.co.mz.agenticai.core.retrieval.bm25.KoreanAnalyzers;
@@ -120,18 +123,30 @@ public class AgenticRagRetrievalAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnMissingBean(RetrievalEvaluator.class)
+    public RetrievalEvaluator retrievalEvaluator(AgenticRagProperties props) {
+        var cfg = props.getRetrieval().getEvaluator();
+        if (cfg.isEnabled() && "score-threshold".equals(cfg.getStrategy())) {
+            return new ScoreThresholdEvaluator(cfg.getMinScore());
+        }
+        return new PassThroughRetrievalEvaluator();
+    }
+
+    @Bean
     @ConditionalOnMissingBean(RetrieverRouter.class)
     @ConditionalOnBean(DocumentSource.class)
     public RetrieverRouter retrieverRouter(
             List<DocumentSource> sources,
             ResultFusion fusion,
             Reranker reranker,
+            RetrievalEvaluator evaluator,
             ObjectProvider<QueryTransformer> queryTransformer,
             ObjectProvider<QueryExpander> queryExpander,
             RagEventPublisher events,
             AgenticRagProperties props) {
         return new HybridRetrieverRouter(
                 sources, fusion, reranker,
+                evaluator,
                 queryTransformer.getIfAvailable(),
                 queryExpander.getIfAvailable(),
                 events,
