@@ -47,6 +47,7 @@ logs/
 !.env.example
 *.pem
 *.key
+.mcp.json
 
 # Local config
 local.properties
@@ -66,3 +67,7 @@ sonar-tokens.properties
 
 # Node (in case examples include UI later)
 node_modules/
+
+# Jira integration (local dev context)
+.jira-context.json
+TASK-README.md
