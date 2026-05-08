@@ -48,7 +48,7 @@ class MetricsRagEventListenerTest {
     @Test
     void llmDurationAndStreamedTokensRecorded() {
         listener.onLlmResponded(new LlmEvent.LlmResponded(
-                "ollama", "gpt-oss:20b", 0L, 120L, 1500L, Instant.now(), "c1"));
+                "ollama", "gpt-oss:20b", 50L, 120L, 1500L, Instant.now(), "c1"));
         listener.onLlmTokenStreamed(new LlmEvent.LlmTokenStreamed(
                 "ollama", "gpt-oss:20b", "안녕", Instant.now(), "c1"));
         listener.onLlmTokenStreamed(new LlmEvent.LlmTokenStreamed(
@@ -59,6 +59,15 @@ class MetricsRagEventListenerTest {
         assertThat(registry.counter("agentic.rag.llm.tokens",
                 "provider", "ollama", "model", "gpt-oss:20b", "kind", "streamed").count())
                 .isEqualTo(2.0);
+        assertThat(registry.summary("agentic.rag.llm.tokens",
+                "provider", "ollama", "model", "gpt-oss:20b", "kind", "completion").totalAmount())
+                .isEqualTo(120.0);
+        assertThat(registry.summary("agentic.rag.llm.tokens",
+                "provider", "ollama", "model", "gpt-oss:20b", "kind", "prompt").totalAmount())
+                .isEqualTo(50.0);
+        assertThat(registry.summary("agentic.rag.llm.tokens",
+                "provider", "ollama", "model", "gpt-oss:20b", "kind", "total").totalAmount())
+                .isEqualTo(170.0);
     }
 
     @Test
