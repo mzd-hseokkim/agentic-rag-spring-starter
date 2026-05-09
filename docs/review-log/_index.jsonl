@@ -1,0 +1,3 @@
+{"taskId": "MAE-346", "timestamp": "2026-05-08T13:38:29Z", "outcome": "fail", "severityCounts": {"critical": 0, "high": 3, "medium": 0, "low": 0, "info": 2}}
+{"taskId": "MAE-346", "timestamp": "2026-05-08T23:02:45Z", "outcome": "fail", "severityCounts": {"critical": 0, "high": 2, "medium": 0, "low": 0, "info": 3}}
+{"taskId": "MAE-346", "timestamp": "2026-05-08T23:26:19Z", "outcome": "fail", "severityCounts": {"critical": 1, "high": 3, "medium": 0, "low": 0, "info": 2}}

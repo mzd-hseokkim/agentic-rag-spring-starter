@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 1,
+  "taskId": "MAE-346",
+  "entries": [
+    {
+      "taskId": "MAE-346",
+      "timestamp": "2026-05-08T13:38:29Z",
+      "reviewerVersion": "unknown",
+      "outcome": "fail",
+      "findings": [
+        {
+          "id": "F-001",
+          "severity": "high",
+          "file": "agentic-rag-agents/src/main/java/kr/co/mz/agenticai/core/agent/agents/SummaryAgent.java",
+          "line": 118,
+          "category": "style",
+          "message": "FQN java.util.ArrayList used instead of import"
+        },
+        {
+          "id": "F-002",
+          "severity": "high",
+          "file": "agentic-rag-core/src/main/java/kr/co/mz/agenticai/core/common/spi/MemoryPolicy.java",
+          "line": 27,
+          "category": "contract",
+          "message": "Javadoc says excluding system message but RollingSummaryPolicy prepends one"
+        },
+        {
+          "id": "F-003",
+          "severity": "high",
+          "file": "agentic-rag-core/src/main/java/kr/co/mz/agenticai/core/common/memory/policy/RollingSummaryPolicy.java",
+          "line": 88,
+          "category": "logic",
+          "message": "splitAt min logic mixes recentTurns and summarizeFraction semantics"
+        },
+        {
+          "id": "F-004",
+          "severity": "info",
+          "file": "README.md",
+          "line": 0,
+          "category": "docs",
+          "message": "Memory policy section missing (Plan #13)"
+        },
+        {
+          "id": "F-005",
+          "severity": "info",
+          "file": "docs",
+          "line": 0,
+          "category": "test",
+          "message": "E2E IT_RollingSummary not added (Plan #12) — covered by unit-level e2e"
+        }
+      ],
+      "severityCounts": {
+        "critical": 0,
+        "high": 3,
+        "medium": 0,
+        "low": 0,
+        "info": 2
+      },
+      "falsePositive": null,
+      "userOverride": null
+    },
+    {
+      "taskId": "MAE-346",
+      "timestamp": "2026-05-08T23:02:45Z",
+      "reviewerVersion": "unknown",
+      "outcome": "fail",
+      "findings": [
+        {
+          "id": "F-001",
+          "severity": "high",
+          "file": "agentic-rag-core/src/main/java/kr/co/mz/agenticai/core/common/memory/policy/TokenWindowPolicy.java",
+          "line": 46,
+          "category": "correctness",
+          "message": "SYSTEM 메시지 항상 보존 미구현 (T2 검증 항목)"
+        },
+        {
+          "id": "F-002",
+          "severity": "high",
+          "file": "agentic-rag-core/src/main/java/kr/co/mz/agenticai/core/common/memory/policy/RollingSummaryPolicy.java",
+          "line": 89,
+          "category": "doc",
+          "message": "splitAt 주석/실동작 불일치 (recentTurns vs summarizeFraction 우위)"
+        },
+        {
+          "id": "F-003",
+          "severity": "info",
+          "file": "README.md",
+          "line": 0,
+          "category": "completeness",
+          "message": "Memory 섹션 + JDBC 어댑터 가이드 미작성 (Jira 완료 기준)"
+        },
+        {
+          "id": "F-004",
+          "severity": "info",
+          "file": "examples/agentic-rag-demo",
+          "line": 0,
+          "category": "completeness",
+          "message": "RollingSummary E2E IT 미작성 (Plan #12)"
+        },
+        {
+          "id": "F-005",
+          "severity": "info",
+          "file": "agentic-rag-autoconfigure/src/main/java/kr/co/mz/agenticai/core/autoconfigure/AgenticRagProperties.java",
+          "line": 257,
+          "category": "deprecation",
+          "message": "historyLimit과 policy.windowSize 중복 — @Deprecated 표시 권장"
+        }
+      ],
+      "severityCounts": {
+        "critical": 0,
+        "high": 2,
+        "medium": 0,
+        "low": 0,
+        "info": 3
+      },
+      "falsePositive": null,
+      "userOverride": null
+    },
+    {
+      "taskId": "MAE-346",
+      "timestamp": "2026-05-08T23:26:19Z",
+      "reviewerVersion": "unknown",
+      "outcome": "fail",
+      "findings": [
+        {
+          "id": "F-001",
+          "severity": "critical",
+          "file": "README.md",
+          "line": 137,
+          "category": "docs/config",
+          "message": "policy.type label RECENT_MESSAGES does not match enum PolicyType.RECENT — startup will fail."
+        },
+        {
+          "id": "F-002",
+          "severity": "high",
+          "file": "agentic-rag-core/src/main/java/kr/co/mz/agenticai/core/common/memory/policy/RollingSummaryPolicy.java",
+          "line": 118,
+          "category": "resilience",
+          "message": "chatModel.call exceptions propagate; no fallback to verbatim recentTurns."
+        },
+        {
+          "id": "F-003",
+          "severity": "high",
+          "file": "README.md",
+          "line": 137,
+          "category": "docs",
+          "message": "TokenWindowPolicy SYSTEM record trimming behaviour not documented in README table."
+        },
+        {
+          "id": "F-004",
+          "severity": "high",
+          "file": "agentic-rag-core/src/main/java/kr/co/mz/agenticai/core/common/spi/MemoryPolicy.java",
+          "line": 28,
+          "category": "api-design",
+          "message": "systemPrompt leakage requires every caller to detect first SystemMessage; consider PolicyResult record in Phase 2."
+        },
+        {
+          "id": "F-005",
+          "severity": "info",
+          "file": "agentic-rag-core/src/main/java/kr/co/mz/agenticai/core/common/memory/policy/HeuristicTokenCounter.java",
+          "line": 17,
+          "category": "i18n",
+          "message": "char/4 undercounts Korean tokens; recommend tighter budget or jtokkit bean."
+        },
+        {
+          "id": "F-006",
+          "severity": "info",
+          "file": "agentic-rag-autoconfigure/src/main/java/kr/co/mz/agenticai/core/autoconfigure/AgenticRagProperties.java",
+          "line": 259,
+          "category": "deprecation",
+          "message": "Memory.historyLimit field is unread after refactor; mark @DeprecatedConfigurationProperty or remove."
+        }
+      ],
+      "severityCounts": {
+        "critical": 1,
+        "high": 3,
+        "medium": 0,
+        "low": 0,
+        "info": 2
+      },
+      "falsePositive": null,
+      "userOverride": null
+    }
+  ]
+}

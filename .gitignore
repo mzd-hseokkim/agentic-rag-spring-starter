@@ -33,6 +33,8 @@ bin/
 .DS_Store
 Thumbs.db
 desktop.ini
+# Windows reserved device name created by shell stderr redirect (e.g. 2>nul)
+/nul
 
 # Logs / tmp
 *.log
@@ -66,3 +68,10 @@ sonar-tokens.properties
 
 # Node (in case examples include UI later)
 node_modules/
+
+# Jira integration (local dev context)
+.jira-context.json
+TASK-README.md
+
+# Claude/MCP local config
+.mcp.json

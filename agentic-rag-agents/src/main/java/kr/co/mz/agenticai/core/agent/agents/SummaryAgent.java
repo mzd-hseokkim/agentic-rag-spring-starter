@@ -6,10 +6,11 @@ import java.util.Objects;
 import kr.co.mz.agenticai.core.common.AgentContext;
 import kr.co.mz.agenticai.core.common.Citation;
 import kr.co.mz.agenticai.core.common.memory.MemoryRecord;
+import kr.co.mz.agenticai.core.common.memory.policy.RecentMessagesPolicy;
 import kr.co.mz.agenticai.core.common.spi.Agent;
+import kr.co.mz.agenticai.core.common.spi.MemoryPolicy;
 import kr.co.mz.agenticai.core.common.spi.MemoryStore;
 import kr.co.mz.agenticai.core.common.spi.ToolProvider;
-import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
@@ -38,29 +39,29 @@ public final class SummaryAgent implements Agent {
     private final ChatModel chatModel;
     private final ToolProvider toolProvider;
     private final MemoryStore memoryStore;
+    private final MemoryPolicy memoryPolicy;
     private final String systemPrompt;
     private final String userPromptTemplate;
-    private final int historyLimit;
 
     public SummaryAgent(ChatModel chatModel) {
-        this(chatModel, null, null,
-                KoreanAgentPrompts.SUMMARY_SYSTEM, KoreanAgentPrompts.SUMMARY_USER,
-                DEFAULT_HISTORY_LIMIT);
+        this(chatModel, null, null, null,
+                KoreanAgentPrompts.SUMMARY_SYSTEM, KoreanAgentPrompts.SUMMARY_USER);
     }
 
     public SummaryAgent(ChatModel chatModel, String systemPrompt, String userPromptTemplate) {
-        this(chatModel, null, null, systemPrompt, userPromptTemplate, DEFAULT_HISTORY_LIMIT);
+        this(chatModel, null, null, null, systemPrompt, userPromptTemplate);
     }
 
     public SummaryAgent(ChatModel chatModel, ToolProvider toolProvider, MemoryStore memoryStore) {
-        this(chatModel, toolProvider, memoryStore, DEFAULT_HISTORY_LIMIT);
+        this(chatModel, toolProvider, memoryStore, null,
+                KoreanAgentPrompts.SUMMARY_SYSTEM, KoreanAgentPrompts.SUMMARY_USER);
     }
 
     public SummaryAgent(
             ChatModel chatModel, ToolProvider toolProvider, MemoryStore memoryStore, int historyLimit) {
         this(chatModel, toolProvider, memoryStore,
-                KoreanAgentPrompts.SUMMARY_SYSTEM, KoreanAgentPrompts.SUMMARY_USER,
-                historyLimit);
+                new RecentMessagesPolicy(historyLimit),
+                KoreanAgentPrompts.SUMMARY_SYSTEM, KoreanAgentPrompts.SUMMARY_USER);
     }
 
     public SummaryAgent(
@@ -70,15 +71,28 @@ public final class SummaryAgent implements Agent {
             String systemPrompt,
             String userPromptTemplate,
             int historyLimit) {
+        this(chatModel, toolProvider, memoryStore,
+                new RecentMessagesPolicy(historyLimit),
+                systemPrompt, userPromptTemplate);
+    }
+
+    public SummaryAgent(
+            ChatModel chatModel,
+            ToolProvider toolProvider,
+            MemoryStore memoryStore,
+            MemoryPolicy memoryPolicy,
+            String systemPrompt,
+            String userPromptTemplate) {
         this.chatModel = Objects.requireNonNull(chatModel, "chatModel");
         this.toolProvider = toolProvider;
         this.memoryStore = memoryStore;
+        this.memoryPolicy = memoryPolicy != null ? memoryPolicy
+                : new RecentMessagesPolicy(DEFAULT_HISTORY_LIMIT);
         this.systemPrompt = Objects.requireNonNull(systemPrompt, "systemPrompt");
         this.userPromptTemplate = Objects.requireNonNull(userPromptTemplate, "userPromptTemplate");
         if (!userPromptTemplate.contains("{query}") || !userPromptTemplate.contains("{sources}")) {
             throw new IllegalArgumentException("userPromptTemplate needs {query} and {sources}");
         }
-        this.historyLimit = historyLimit;
     }
 
     @Override
@@ -93,15 +107,20 @@ public final class SummaryAgent implements Agent {
                 .replace("{query}", context.request().query());
         String conversationId = context.request().sessionId();
 
+        List<MemoryRecord> history = (conversationId != null && memoryStore != null)
+                ? memoryStore.history(conversationId, Integer.MAX_VALUE)
+                : List.of();
+        List<Message> policyMessages = memoryPolicy.apply(history, context.request().query(), systemPrompt);
+
+        // RollingSummaryPolicy may prepend a modified SystemMessage; use it if present.
+        boolean policyProvidedSystem = !policyMessages.isEmpty()
+                && policyMessages.get(0) instanceof SystemMessage;
         List<Message> messages = new ArrayList<>();
-        messages.add(new SystemMessage(systemPrompt));
-        if (conversationId != null && memoryStore != null && historyLimit > 0) {
-            for (MemoryRecord rec : memoryStore.history(conversationId, historyLimit)) {
-                Message m = toMessage(rec);
-                if (m != null) {
-                    messages.add(m);
-                }
-            }
+        if (policyProvidedSystem) {
+            messages.addAll(policyMessages);
+        } else {
+            messages.add(new SystemMessage(systemPrompt));
+            messages.addAll(policyMessages);
         }
         messages.add(new UserMessage(userText));
 
@@ -128,16 +147,6 @@ public final class SummaryAgent implements Agent {
                 .toolCallbacks(tools)
                 .build();
         return new Prompt(messages, options);
-    }
-
-    private static Message toMessage(MemoryRecord rec) {
-        return switch (rec.role()) {
-            case USER -> new UserMessage(rec.content());
-            case ASSISTANT -> new AssistantMessage(rec.content());
-            case SYSTEM -> new SystemMessage(rec.content());
-            // Tool messages are not replayed into history for the summary call.
-            case TOOL -> null;
-        };
     }
 
     private static String renderSources(List<Document> sources) {

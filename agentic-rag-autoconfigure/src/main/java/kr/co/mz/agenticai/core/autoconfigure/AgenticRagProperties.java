@@ -257,6 +257,7 @@ public class AgenticRagProperties {
         /** Number of past messages prefixed to each LLM call. */
         private int historyLimit = 10;
         private Redis redis = new Redis();
+        private Policy policy = new Policy();
 
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean v) { this.enabled = v; }
@@ -264,6 +265,34 @@ public class AgenticRagProperties {
         public void setHistoryLimit(int v) { this.historyLimit = v; }
         public Redis getRedis() { return redis; }
         public void setRedis(Redis v) { this.redis = v; }
+        public Policy getPolicy() { return policy; }
+        public void setPolicy(Policy v) { this.policy = v; }
+    }
+
+    public enum PolicyType { RECENT, TOKEN_WINDOW, ROLLING_SUMMARY }
+
+    public static class Policy {
+        /** Active policy type; defaults to RECENT (historyLimit-equivalent). */
+        private PolicyType type = PolicyType.RECENT;
+        /** Window size for RECENT policy (message count). */
+        private int windowSize = 10;
+        /** Token budget for TOKEN_WINDOW and ROLLING_SUMMARY policies. */
+        private int tokenBudget = 2000;
+        /** Fraction of oldest messages to summarize when budget is exceeded (ROLLING_SUMMARY). */
+        private double summarizeFraction = 0.5;
+        /** Number of most-recent turns kept verbatim in ROLLING_SUMMARY. */
+        private int recentTurns = 6;
+
+        public PolicyType getType() { return type; }
+        public void setType(PolicyType v) { this.type = v; }
+        public int getWindowSize() { return windowSize; }
+        public void setWindowSize(int v) { this.windowSize = v; }
+        public int getTokenBudget() { return tokenBudget; }
+        public void setTokenBudget(int v) { this.tokenBudget = v; }
+        public double getSummarizeFraction() { return summarizeFraction; }
+        public void setSummarizeFraction(double v) { this.summarizeFraction = v; }
+        public int getRecentTurns() { return recentTurns; }
+        public void setRecentTurns(int v) { this.recentTurns = v; }
     }
 
     public static class Redis {
