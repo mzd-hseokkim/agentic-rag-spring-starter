@@ -11,7 +11,7 @@ import org.springframework.ai.document.Document;
  * <p>Callers that need only the documents can continue using
  * {@link kr.co.mz.agenticai.core.common.spi.RetrieverRouter#retrieve} directly.
  * Callers that want to branch on the evaluation result should invoke
- * {@link kr.co.mz.agenticai.core.common.spi.RetrieverRouter#retrieveWithDecision}
+ * {@link HybridRetrieverRouter#retrieveWithDecision}
  * and inspect this record.
  */
 public record RetrievalOutcome(List<Document> documents, Decision decision) {
