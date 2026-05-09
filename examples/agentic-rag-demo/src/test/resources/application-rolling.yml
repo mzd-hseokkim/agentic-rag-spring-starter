@@ -1,0 +1,7 @@
+agentic-rag:
+  memory:
+    policy:
+      type: ROLLING_SUMMARY
+      token-budget: 100
+      recent-turns: 2
+      summarize-fraction: 0.5

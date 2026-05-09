@@ -14,6 +14,7 @@ import kr.co.mz.agenticai.core.common.AgenticRagClient;
 import kr.co.mz.agenticai.core.common.spi.Agent;
 import kr.co.mz.agenticai.core.common.spi.AgentOrchestrator;
 import kr.co.mz.agenticai.core.common.spi.FactChecker;
+import kr.co.mz.agenticai.core.common.spi.MemoryPolicy;
 import kr.co.mz.agenticai.core.common.spi.MemoryStore;
 import kr.co.mz.agenticai.core.common.spi.RagEventPublisher;
 import kr.co.mz.agenticai.core.common.spi.RetrieverRouter;
@@ -28,6 +29,7 @@ import org.springframework.context.annotation.Bean;
 
 @AutoConfiguration(after = {
         AgenticRagCoreAutoConfiguration.class,
+        AgenticRagMemoryAutoConfiguration.class,
         AgenticRagRetrievalAutoConfiguration.class,
         AgenticRagFactCheckAutoConfiguration.class
 })
@@ -68,6 +70,7 @@ public class AgenticRagAgentsAutoConfiguration {
             ChatModel chatModel,
             ObjectProvider<ToolProvider> toolProvider,
             ObjectProvider<MemoryStore> memoryStore,
+            ObjectProvider<MemoryPolicy> memoryPolicy,
             AgenticRagProperties props) {
         AgenticRagProperties.Summary cfg = props.getAgents().getSummary();
         String systemPrompt = blankToNull(cfg.getSystemPrompt()) != null
@@ -78,9 +81,9 @@ public class AgenticRagAgentsAutoConfiguration {
                 chatModel,
                 toolProvider.getIfAvailable(),
                 memoryStore.getIfAvailable(),
+                memoryPolicy.getIfAvailable(),
                 systemPrompt,
-                userTemplate,
-                props.getMemory().getHistoryLimit());
+                userTemplate);
     }
 
     private static String blankToNull(String s) {

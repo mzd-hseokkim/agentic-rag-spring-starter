@@ -14,6 +14,8 @@ import kr.co.mz.agenticai.core.common.AgentContext;
 import kr.co.mz.agenticai.core.common.RagRequest;
 import kr.co.mz.agenticai.core.common.memory.InMemoryMemoryStore;
 import kr.co.mz.agenticai.core.common.memory.MemoryRecord;
+import kr.co.mz.agenticai.core.common.memory.policy.RecentMessagesPolicy;
+import kr.co.mz.agenticai.core.common.spi.MemoryPolicy;
 import kr.co.mz.agenticai.core.common.spi.MemoryStore;
 import kr.co.mz.agenticai.core.common.spi.ToolProvider;
 import kr.co.mz.agenticai.core.common.tool.EmptyToolProvider;
@@ -22,6 +24,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.MessageType;
+import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -139,5 +142,59 @@ class SummaryAgentTest {
         agent.execute(ctx);
 
         assertThat(ctx.answer()).isEqualTo("");
+    }
+
+    @Test
+    void usesCustomMemoryPolicyWhenProvided() {
+        ChatModel chat = mock(ChatModel.class);
+        when(chat.call(any(Prompt.class))).thenReturn(respondWith("정책 적용 응답"));
+
+        MemoryStore store = new InMemoryMemoryStore();
+        store.append("s2", MemoryRecord.user("이전"));
+        store.append("s2", MemoryRecord.assistant("답"));
+
+        // Custom policy: windowSize=1 — only last 1 message
+        MemoryPolicy policy = new RecentMessagesPolicy(1);
+        var agent = new SummaryAgent(chat, null, store, policy,
+                KoreanAgentPrompts.SUMMARY_SYSTEM, KoreanAgentPrompts.SUMMARY_USER);
+        agent.execute(contextWith("새 질문", "s2"));
+
+        ArgumentCaptor<Prompt> captor = ArgumentCaptor.forClass(Prompt.class);
+        verify(chat).call(captor.capture());
+        List<MessageType> types = captor.getValue().getInstructions().stream()
+                .map(Message::getMessageType).toList();
+        // system + 1 history message (assistant "답") + user
+        assertThat(types).containsExactly(MessageType.SYSTEM, MessageType.ASSISTANT, MessageType.USER);
+    }
+
+    @Test
+    void policyProvidedSystemMessageOverridesDefault() {
+        ChatModel chat = mock(ChatModel.class);
+        when(chat.call(any(Prompt.class))).thenReturn(respondWith("응답"));
+
+        MemoryStore store = new InMemoryMemoryStore();
+        store.append("s3", MemoryRecord.user("q1"));
+        store.append("s3", MemoryRecord.assistant("a1"));
+
+        // Policy that prepends a SystemMessage (simulates RollingSummaryPolicy)
+        MemoryPolicy policyWithSystem = (history, query, systemPrompt) -> List.of(
+                new SystemMessage("요약된 시스템: " + systemPrompt),
+                new UserMessage("이전 질문")
+        );
+
+        var agent = new SummaryAgent(chat, null, store, policyWithSystem,
+                KoreanAgentPrompts.SUMMARY_SYSTEM, KoreanAgentPrompts.SUMMARY_USER);
+        agent.execute(contextWith("새 질문", "s3"));
+
+        ArgumentCaptor<Prompt> captor = ArgumentCaptor.forClass(Prompt.class);
+        verify(chat).call(captor.capture());
+        List<Message> msgs = captor.getValue().getInstructions();
+        // Policy's SystemMessage should be used directly (not doubled with default system)
+        assertThat(msgs.get(0).getMessageType()).isEqualTo(MessageType.SYSTEM);
+        assertThat(msgs.get(0).getText()).startsWith("요약된 시스템:");
+        // Count of SYSTEM messages = exactly 1
+        long systemCount = msgs.stream()
+                .filter(m -> m.getMessageType() == MessageType.SYSTEM).count();
+        assertThat(systemCount).isEqualTo(1);
     }
 }

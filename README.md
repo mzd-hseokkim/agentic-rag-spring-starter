@@ -30,8 +30,10 @@ Micrometer 메트릭까지 전부 자동 구성된다.
   토큰 단위 이벤트 발행
 - **Eventing** — Ingestion / Retrieval / LLM / FactCheck / Agent 모든 단계에서 `RagEvent` 발행.
   기본 `ApplicationEventPublisher` 어댑터 + 사용자가 Kafka/HTTP 등 구현체 등록 가능
-- **Conversational Memory** — `MemoryStore` SPI. 기본은 in-memory, classpath에 Spring Data Redis
-  존재 시 JSON-LIST 기반 Redis 구현체로 자동 교체 (TTL · key prefix 설정)
+- **Conversational Memory** — `MemoryStore` SPI (raw 저장) + `MemoryPolicy` SPI (trimming).
+  기본은 in-memory, classpath에 Spring Data Redis 존재 시 JSON-LIST 기반 Redis 구현체로 자동 교체
+  (TTL · key prefix 설정). 정책 3종 (`RecentMessages` / `TokenWindow` / `RollingSummary`) 기본 제공,
+  `application.yml`로 선택 가능
 - **Tool Calling** — `ToolProvider` SPI. `@Tool` 빈 / MCP tool source 등 모든
   `ToolCallbackProvider`를 카탈로그로 집계, 이름 기반 allow/deny 필터 지원
 - **Observability** — Micrometer 메트릭 (MeterRegistry 존재 시 자동). OTel 트레이싱은
@@ -122,6 +124,79 @@ class MyService {
     }
 }
 ```
+
+## Memory Policy
+
+`MemoryStore` (raw 저장)와 `MemoryPolicy` (trimming)은 분리된 SPI다.
+`MemoryStore`는 이력을 append/load/clear하고, `MemoryPolicy`는 LLM에 전달하기 직전 history를 가공한다.
+
+### 정책 선택 가이드
+
+| 정책 | `memory.policy.type` | 특징 | 권장 상황 |
+|------|---------------------|------|----------|
+| `RecentMessagesPolicy` | `RECENT` | 최근 N개 메시지만 전달 | 짧은 Q&A, 저비용 모델 |
+| `TokenWindowPolicy` | `TOKEN_WINDOW` | 토큰 budget 내 최신 메시지 최대 유지 | 중간 길이 대화, 토큰 비용 민감 |
+| `RollingSummaryPolicy` | `ROLLING_SUMMARY` | budget 초과 시 오래된 부분을 LLM으로 요약해 SystemMessage에 압축 | 장기 대화, 맥락 손실 최소화 |
+
+```yaml
+agentic-rag:
+  memory:
+    policy:
+      type: ROLLING_SUMMARY      # RECENT | TOKEN_WINDOW | ROLLING_SUMMARY
+      window-size: 20            # RecentMessagesPolicy: 메시지 수
+      token-budget: 4000         # TokenWindow / RollingSummary: 토큰 예산
+      summarize-fraction: 0.5    # RollingSummary: 한 번에 압축할 비율 (0 < x < 1)
+      recent-turns: 6            # RollingSummary: 항상 verbatim 유지할 최소 메시지 수
+```
+
+> `ROLLING_SUMMARY` 사용 시 `ChatModel` 빈이 반드시 등록되어 있어야 한다.
+
+### JDBC MemoryStore 어댑터 작성 예제
+
+JDBC 구현체는 starter에 포함되지 않는다. `MemoryStore` SPI를 직접 구현한 뒤 빈으로 등록하면
+`@ConditionalOnMissingBean` 규칙에 따라 기본 구현체를 대체한다.
+
+```java
+@Component
+public class JdbcMemoryStore implements MemoryStore {
+
+    private final JdbcTemplate jdbc;
+
+    public JdbcMemoryStore(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
+    }
+
+    @Override
+    public void append(String conversationId, MemoryRecord record) {
+        jdbc.update(
+            "INSERT INTO memory_records (conversation_id, role, content, created_at) VALUES (?,?,?,?)",
+            conversationId, record.role().name(), record.content(), record.timestamp()
+        );
+    }
+
+    @Override
+    public List<MemoryRecord> history(String conversationId, int limit) {
+        return jdbc.query(
+            "SELECT role, content, created_at FROM memory_records " +
+            "WHERE conversation_id = ? ORDER BY created_at DESC LIMIT ?",
+            (rs, i) -> new MemoryRecord(
+                MemoryRecord.Role.valueOf(rs.getString("role")),
+                rs.getString("content"),
+                rs.getTimestamp("created_at").toInstant()
+            ),
+            conversationId, limit
+        );
+    }
+
+    @Override
+    public void clear(String conversationId) {
+        jdbc.update("DELETE FROM memory_records WHERE conversation_id = ?", conversationId);
+    }
+}
+```
+
+Spring AI `ChatMemory`와 함께 사용하려면 `SpringAiChatMemoryAdapter`를 통해 `ChatMemory`
+인터페이스로 노출할 수 있다 (autoconfigure에서 `@ConditionalOnMissingBean(ChatMemory.class)`로 자동 등록).
 
 ## Architecture
 
