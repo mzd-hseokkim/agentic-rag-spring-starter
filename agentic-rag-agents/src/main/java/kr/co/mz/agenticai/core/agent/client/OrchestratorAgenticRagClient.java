@@ -1,5 +1,7 @@
 package kr.co.mz.agenticai.core.agent.client;
 
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +12,7 @@ import kr.co.mz.agenticai.core.common.RagResponse;
 import kr.co.mz.agenticai.core.common.RagStreamEvent;
 import kr.co.mz.agenticai.core.common.RagUsage;
 import kr.co.mz.agenticai.core.common.guardrail.Guardrails;
+import kr.co.mz.agenticai.core.common.observability.RagObservability;
 import kr.co.mz.agenticai.core.common.spi.AgentOrchestrator;
 import kr.co.mz.agenticai.core.common.spi.Guardrail;
 import reactor.core.publisher.Flux;
@@ -26,14 +29,21 @@ public final class OrchestratorAgenticRagClient implements AgenticRagClient {
 
     private final AgentOrchestrator orchestrator;
     private final List<Guardrail> guardrails;
+    private final ObservationRegistry observationRegistry;
 
     public OrchestratorAgenticRagClient(AgentOrchestrator orchestrator) {
-        this(orchestrator, List.of());
+        this(orchestrator, List.of(), ObservationRegistry.NOOP);
     }
 
     public OrchestratorAgenticRagClient(AgentOrchestrator orchestrator, List<Guardrail> guardrails) {
+        this(orchestrator, guardrails, ObservationRegistry.NOOP);
+    }
+
+    public OrchestratorAgenticRagClient(AgentOrchestrator orchestrator, List<Guardrail> guardrails,
+            ObservationRegistry observationRegistry) {
         this.orchestrator = Objects.requireNonNull(orchestrator, "orchestrator");
         this.guardrails = guardrails == null ? List.of() : List.copyOf(guardrails);
+        this.observationRegistry = observationRegistry != null ? observationRegistry : ObservationRegistry.NOOP;
     }
 
     @Override
@@ -42,7 +52,16 @@ public final class OrchestratorAgenticRagClient implements AgenticRagClient {
         if (inputOutcome.blocked()) {
             return blockedResponse(inputOutcome);
         }
-        RagResponse response = orchestrator.run(withQuery(request, inputOutcome.text()));
+        Observation agentRunObs = RagObservability.start(RagObservability.SPAN_AGENT_RUN, observationRegistry);
+        RagResponse response;
+        try {
+            response = orchestrator.run(withQuery(request, inputOutcome.text()));
+        } catch (RuntimeException e) {
+            agentRunObs.error(e);
+            throw e;
+        } finally {
+            agentRunObs.stop();
+        }
 
         Guardrails.Outcome outputOutcome = Guardrails.apply(
                 guardrails, Guardrail.Stage.OUTPUT, response.answer());

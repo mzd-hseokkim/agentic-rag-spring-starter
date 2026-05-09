@@ -37,7 +37,9 @@ Micrometer 메트릭까지 전부 자동 구성된다.
 - **Tool Calling** — `ToolProvider` SPI. `@Tool` 빈 / MCP tool source 등 모든
   `ToolCallbackProvider`를 카탈로그로 집계, 이름 기반 allow/deny 필터 지원
 - **Observability** — Micrometer 메트릭 (MeterRegistry 존재 시 자동). OTel 트레이싱은
-  `micrometer-tracing-bridge-otel` 추가 시 자동 연계
+  `micrometer-tracing-bridge-otel` 추가 시 자동 연계.
+  query path 전 구간 (retrieval → agent planner/synthesizer → LLM call → factcheck) span 발행,
+  `rag-correlation-id` baggage로 단일 query 내 분산 추적 가능
 
 ## Modules
 
@@ -197,6 +199,73 @@ public class JdbcMemoryStore implements MemoryStore {
 
 Spring AI `ChatMemory`와 함께 사용하려면 `SpringAiChatMemoryAdapter`를 통해 `ChatMemory`
 인터페이스로 노출할 수 있다 (autoconfigure에서 `@ConditionalOnMissingBean(ChatMemory.class)`로 자동 등록).
+
+## Observability
+
+### OTel 트레이싱 활성화
+
+기본 의존성만으로는 Micrometer 메트릭만 수집된다. OTel 분산 추적을 원하면 런타임 classpath에 다음을 추가한다.
+
+**build.gradle.kts**
+
+```kotlin
+dependencies {
+    // OTel bridge — runtime only (compileOnly로 이미 guard됨)
+    runtimeOnly("io.micrometer:micrometer-tracing-bridge-otel")
+    runtimeOnly("io.opentelemetry:opentelemetry-exporter-otlp")
+}
+```
+
+**application.yml**
+
+```yaml
+management:
+  tracing:
+    sampling:
+      probability: 1.0   # 개발: 전량, 운영: 0.1 권장
+  otlp:
+    tracing:
+      endpoint: http://localhost:4318/v1/traces
+```
+
+### Span 구조
+
+query path 1회 실행 시 다음 span 트리가 생성된다.
+
+```
+rag.agent.run              (OrchestratorAgenticRagClient — 6-agent 모드 시)
+  rag.agent.planner        (IntentAnalysisAgent — 의도 분류 LLM call)
+  rag.retrieval.vector     (HybridRetrieverRouter — vector 검색)
+  rag.retrieval.bm25       (HybridRetrieverRouter — BM25 검색)
+  rag.retrieval.fusion     (RRF 융합)
+  rag.retrieval.rerank     (재랭킹)
+  rag.agent.synthesizer    (SummaryAgent — 답변 생성 LLM call)
+  rag.factcheck            (LlmFactChecker — 선택적)
+rag.llm.call               (DefaultAgenticRagClient — 단일-pass 모드 시 LLM call)
+```
+
+### Baggage 전파
+
+`rag-correlation-id` 키로 단일 query 내 모든 span이 같은 correlation-id를 공유한다.
+`DefaultAgenticRagClient`가 query 시작 시 ID를 생성해 baggage에 주입하고,
+`HybridRetrieverRouter`는 baggage에서 읽어 재사용한다 (중복 생성 방지).
+
+### Attribute 카디널리티
+
+| Attribute | 카디널리티 | span |
+|---|---|---|
+| `rag.retriever_id` | low | retrieval |
+| `rag.retrieval_k` | low | retrieval |
+| `rag.fusion_strategy` | low | fusion |
+| `rag.reranker_class` | low | rerank |
+| `rag.llm.provider` | low | llm.call |
+| `rag.llm.model_class` | low | llm.call |
+| `rag.factcheck.verdict` | low | factcheck |
+| `rag.correlation_id` | **high** | 전체 |
+| `rag.retrieval_hits` | **high** | retrieval |
+| `rag.factcheck.confidence` | **high** | factcheck |
+
+UUID 기반 `rag.correlation_id`는 `highCardinalityKeyValue`로 등록되므로 OTel exporter의 메트릭 라벨로 노출되지 않는다.
 
 ## Architecture
 

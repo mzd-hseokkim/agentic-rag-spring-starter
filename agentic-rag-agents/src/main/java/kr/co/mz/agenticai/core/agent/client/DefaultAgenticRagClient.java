@@ -1,5 +1,8 @@
 package kr.co.mz.agenticai.core.agent.client;
 
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
+import io.micrometer.tracing.Tracer;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +19,8 @@ import kr.co.mz.agenticai.core.common.event.FactCheckEvent;
 import kr.co.mz.agenticai.core.common.event.LlmEvent;
 import kr.co.mz.agenticai.core.common.exception.AgenticRagException;
 import kr.co.mz.agenticai.core.common.guardrail.Guardrails;
+import kr.co.mz.agenticai.core.common.observability.RagBaggage;
+import kr.co.mz.agenticai.core.common.observability.RagObservability;
 import kr.co.mz.agenticai.core.common.spi.FactChecker;
 import kr.co.mz.agenticai.core.common.spi.Guardrail;
 import kr.co.mz.agenticai.core.common.spi.RagEventPublisher;
@@ -45,6 +50,8 @@ public final class DefaultAgenticRagClient implements AgenticRagClient {
     private final String systemPrompt;
     private final String userPromptTemplate;
     private final int defaultTopK;
+    private final ObservationRegistry observationRegistry;
+    private final Tracer tracer;
 
     public DefaultAgenticRagClient(
             RetrieverRouter router,
@@ -53,6 +60,29 @@ public final class DefaultAgenticRagClient implements AgenticRagClient {
             RagEventPublisher events,
             List<Guardrail> guardrails,
             PromptConfig promptConfig) {
+        this(router, chatModel, factChecker, events, guardrails, promptConfig, ObservationRegistry.NOOP, null);
+    }
+
+    public DefaultAgenticRagClient(
+            RetrieverRouter router,
+            ChatModel chatModel,
+            FactChecker factChecker,
+            RagEventPublisher events,
+            List<Guardrail> guardrails,
+            PromptConfig promptConfig,
+            ObservationRegistry observationRegistry) {
+        this(router, chatModel, factChecker, events, guardrails, promptConfig, observationRegistry, null);
+    }
+
+    public DefaultAgenticRagClient(
+            RetrieverRouter router,
+            ChatModel chatModel,
+            FactChecker factChecker,
+            RagEventPublisher events,
+            List<Guardrail> guardrails,
+            PromptConfig promptConfig,
+            ObservationRegistry observationRegistry,
+            Tracer tracer) {
         Objects.requireNonNull(promptConfig, "promptConfig");
         this.router = Objects.requireNonNull(router, "router");
         this.chatModel = Objects.requireNonNull(chatModel, "chatModel");
@@ -62,6 +92,8 @@ public final class DefaultAgenticRagClient implements AgenticRagClient {
         this.systemPrompt = promptConfig.systemPrompt();
         this.userPromptTemplate = promptConfig.userPromptTemplate();
         this.defaultTopK = promptConfig.defaultTopK();
+        this.observationRegistry = observationRegistry != null ? observationRegistry : ObservationRegistry.NOOP;
+        this.tracer = tracer;
     }
 
     /** Groups the answer-generation prompt settings so the public constructor stays under 7 params. */
@@ -84,6 +116,16 @@ public final class DefaultAgenticRagClient implements AgenticRagClient {
         Objects.requireNonNull(request, "request");
         String correlationId = UUID.randomUUID().toString();
 
+        try (AutoCloseable ignored = RagBaggage.set(tracer, correlationId)) {
+            return doAsk(request, correlationId);
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new AgenticRagException("Baggage scope close failed", e);
+        }
+    }
+
+    private RagResponse doAsk(RagRequest request, String correlationId) {
         Guardrails.Outcome inputOutcome = Guardrails.apply(guardrails, Guardrail.Stage.INPUT, request.query());
         if (inputOutcome.blocked()) {
             return blockedResponse(inputOutcome);
@@ -98,12 +140,19 @@ public final class DefaultAgenticRagClient implements AgenticRagClient {
                 PROVIDER, className(chatModel),
                 renderedLength(prompt), Instant.now(), correlationId));
 
+        Observation llmObs = RagObservability.start(RagObservability.SPAN_LLM_CALL, observationRegistry);
+        llmObs.lowCardinalityKeyValue(RagObservability.ATTR_LLM_PROVIDER, PROVIDER);
+        llmObs.lowCardinalityKeyValue(RagObservability.ATTR_LLM_MODEL_CLASS, className(chatModel));
+        llmObs.highCardinalityKeyValue(RagObservability.ATTR_CORRELATION_ID, correlationId);
         String answer;
         try {
             ChatResponse resp = chatModel.call(prompt);
             answer = resp.getResult().getOutput().getText();
         } catch (RuntimeException e) {
+            llmObs.error(e);
             throw new AgenticRagException("LLM call failed", e);
+        } finally {
+            llmObs.stop();
         }
         events.publish(new LlmEvent.LlmResponded(
                 PROVIDER, className(chatModel), 0L, 0L,
@@ -122,10 +171,13 @@ public final class DefaultAgenticRagClient implements AgenticRagClient {
         Objects.requireNonNull(request, "request");
         return Flux.defer(() -> {
             String correlationId = UUID.randomUUID().toString();
+            // Set baggage so downstream spans (e.g. HybridRetrieverRouter) share the same correlation-id.
+            AutoCloseable baggageScope = RagBaggage.set(tracer, correlationId);
 
             Guardrails.Outcome inputOutcome = Guardrails.apply(
                     guardrails, Guardrail.Stage.INPUT, request.query());
             if (inputOutcome.blocked()) {
+                try { baggageScope.close(); } catch (Exception ignored) { /* no-op */ }
                 return Flux.just((RagStreamEvent) new RagStreamEvent.Completed(blockedResponse(inputOutcome)));
             }
             RagRequest sanitizedRequest = withQuery(request, inputOutcome.text());
@@ -137,6 +189,11 @@ public final class DefaultAgenticRagClient implements AgenticRagClient {
                     PROVIDER, className(chatModel),
                     renderedLength(prompt), Instant.now(), correlationId));
 
+            Observation streamObs = RagObservability.start(RagObservability.SPAN_LLM_CALL, observationRegistry);
+            streamObs.lowCardinalityKeyValue(RagObservability.ATTR_LLM_PROVIDER, PROVIDER);
+            streamObs.lowCardinalityKeyValue(RagObservability.ATTR_LLM_MODEL_CLASS, className(chatModel));
+            streamObs.highCardinalityKeyValue(RagObservability.ATTR_CORRELATION_ID, correlationId);
+
             StringBuilder accumulated = new StringBuilder();
             AtomicReference<Long> started = new AtomicReference<>(System.currentTimeMillis());
 
@@ -145,6 +202,7 @@ public final class DefaultAgenticRagClient implements AgenticRagClient {
                     .filter(t -> t != null && !t.isEmpty())
                     .doOnNext(token -> {
                         accumulated.append(token);
+                        streamObs.event(Observation.Event.of(RagObservability.EVENT_LLM_TOKEN));
                         events.publish(new LlmEvent.LlmTokenStreamed(
                                 PROVIDER, className(chatModel), token,
                                 Instant.now(), correlationId));
@@ -152,6 +210,8 @@ public final class DefaultAgenticRagClient implements AgenticRagClient {
                     .map(token -> (RagStreamEvent) new RagStreamEvent.TokenChunk(token));
 
             Flux<RagStreamEvent> tail = Flux.defer(() -> {
+                streamObs.stop();
+                try { baggageScope.close(); } catch (Exception ignored) { /* no-op */ }
                 events.publish(new LlmEvent.LlmResponded(
                         PROVIDER, className(chatModel), 0L, 0L,
                         System.currentTimeMillis() - started.get(),
@@ -165,7 +225,12 @@ public final class DefaultAgenticRagClient implements AgenticRagClient {
             });
 
             return tokens.concatWith(tail)
-                    .onErrorResume(e -> Flux.just(new RagStreamEvent.Failed(e)));
+                    .onErrorResume(e -> {
+                        streamObs.error(e);
+                        streamObs.stop();
+                        try { baggageScope.close(); } catch (Exception ignored) { /* no-op */ }
+                        return Flux.just(new RagStreamEvent.Failed(e));
+                    });
         });
     }
 

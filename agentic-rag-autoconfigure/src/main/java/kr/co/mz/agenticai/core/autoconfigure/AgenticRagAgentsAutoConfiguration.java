@@ -1,5 +1,6 @@
 package kr.co.mz.agenticai.core.autoconfigure;
 
+import io.micrometer.observation.ObservationRegistry;
 import java.util.List;
 import kr.co.mz.agenticai.core.agent.agents.DataConstructionAgent;
 import kr.co.mz.agenticai.core.agent.agents.IntentAnalysisAgent;
@@ -42,8 +43,10 @@ public class AgenticRagAgentsAutoConfiguration {
     // to surface a clear error if no ChatModel bean exists.
     @Bean(name = "intentAnalysisAgent")
     @ConditionalOnMissingBean(name = "intentAnalysisAgent")
-    public Agent intentAnalysisAgent(ChatModel chatModel) {
-        return new IntentAnalysisAgent(chatModel);
+    public Agent intentAnalysisAgent(ChatModel chatModel,
+            ObjectProvider<ObservationRegistry> observationRegistry) {
+        return new IntentAnalysisAgent(chatModel, KoreanAgentPrompts.INTENT_CLASSIFY,
+                observationRegistry.getIfAvailable());
     }
 
     @Bean(name = "retrievalAgent")
@@ -71,6 +74,7 @@ public class AgenticRagAgentsAutoConfiguration {
             ObjectProvider<ToolProvider> toolProvider,
             ObjectProvider<MemoryStore> memoryStore,
             ObjectProvider<MemoryPolicy> memoryPolicy,
+            ObjectProvider<ObservationRegistry> observationRegistry,
             AgenticRagProperties props) {
         AgenticRagProperties.Summary cfg = props.getAgents().getSummary();
         String systemPrompt = blankToNull(cfg.getSystemPrompt()) != null
@@ -83,7 +87,8 @@ public class AgenticRagAgentsAutoConfiguration {
                 memoryStore.getIfAvailable(),
                 memoryPolicy.getIfAvailable(),
                 systemPrompt,
-                userTemplate);
+                userTemplate,
+                observationRegistry.getIfAvailable());
     }
 
     private static String blankToNull(String s) {
@@ -142,7 +147,9 @@ public class AgenticRagAgentsAutoConfiguration {
     @ConditionalOnBean(AgentOrchestrator.class)
     public AgenticRagClient orchestratorClient(
             AgentOrchestrator orchestrator,
-            List<kr.co.mz.agenticai.core.common.spi.Guardrail> guardrails) {
-        return new OrchestratorAgenticRagClient(orchestrator, guardrails);
+            List<kr.co.mz.agenticai.core.common.spi.Guardrail> guardrails,
+            ObjectProvider<ObservationRegistry> observationRegistry) {
+        return new OrchestratorAgenticRagClient(orchestrator, guardrails,
+                observationRegistry.getIfAvailable());
     }
 }

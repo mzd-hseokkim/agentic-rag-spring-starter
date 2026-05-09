@@ -5,4 +5,6 @@ dependencies {
     api(rootProject.libs.spring.ai.client.chat)
     api(rootProject.libs.spring.ai.vector.store)
     implementation(rootProject.libs.micrometer.core)
+    api(rootProject.libs.micrometer.observation)
+    compileOnly(rootProject.libs.micrometer.tracing)
 }

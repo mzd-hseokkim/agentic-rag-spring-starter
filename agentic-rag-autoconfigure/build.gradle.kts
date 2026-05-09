@@ -7,6 +7,8 @@ dependencies {
 
     api(rootProject.libs.spring.boot.autoconfigure)
     api(rootProject.libs.micrometer.core)
+    api(rootProject.libs.micrometer.observation)
+    compileOnly(rootProject.libs.micrometer.tracing.bridge.otel)
     annotationProcessor(rootProject.libs.spring.boot.configuration.processor)
 
     compileOnly(rootProject.libs.spring.boot.starter.data.redis)
