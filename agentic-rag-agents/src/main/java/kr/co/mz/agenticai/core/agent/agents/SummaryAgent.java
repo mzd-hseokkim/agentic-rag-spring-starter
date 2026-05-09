@@ -1,5 +1,7 @@
 package kr.co.mz.agenticai.core.agent.agents;
 
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -7,6 +9,7 @@ import kr.co.mz.agenticai.core.common.AgentContext;
 import kr.co.mz.agenticai.core.common.Citation;
 import kr.co.mz.agenticai.core.common.memory.MemoryRecord;
 import kr.co.mz.agenticai.core.common.memory.policy.RecentMessagesPolicy;
+import kr.co.mz.agenticai.core.common.observability.RagObservability;
 import kr.co.mz.agenticai.core.common.spi.Agent;
 import kr.co.mz.agenticai.core.common.spi.MemoryPolicy;
 import kr.co.mz.agenticai.core.common.spi.MemoryStore;
@@ -42,6 +45,7 @@ public final class SummaryAgent implements Agent {
     private final MemoryPolicy memoryPolicy;
     private final String systemPrompt;
     private final String userPromptTemplate;
+    private final ObservationRegistry observationRegistry;
 
     public SummaryAgent(ChatModel chatModel) {
         this(chatModel, null, null, null,
@@ -83,6 +87,18 @@ public final class SummaryAgent implements Agent {
             MemoryPolicy memoryPolicy,
             String systemPrompt,
             String userPromptTemplate) {
+        this(chatModel, toolProvider, memoryStore, memoryPolicy, systemPrompt, userPromptTemplate,
+                ObservationRegistry.NOOP);
+    }
+
+    public SummaryAgent(
+            ChatModel chatModel,
+            ToolProvider toolProvider,
+            MemoryStore memoryStore,
+            MemoryPolicy memoryPolicy,
+            String systemPrompt,
+            String userPromptTemplate,
+            ObservationRegistry observationRegistry) {
         this.chatModel = Objects.requireNonNull(chatModel, "chatModel");
         this.toolProvider = toolProvider;
         this.memoryStore = memoryStore;
@@ -93,6 +109,7 @@ public final class SummaryAgent implements Agent {
         if (!userPromptTemplate.contains("{query}") || !userPromptTemplate.contains("{sources}")) {
             throw new IllegalArgumentException("userPromptTemplate needs {query} and {sources}");
         }
+        this.observationRegistry = observationRegistry != null ? observationRegistry : ObservationRegistry.NOOP;
     }
 
     @Override
@@ -102,6 +119,18 @@ public final class SummaryAgent implements Agent {
 
     @Override
     public void execute(AgentContext context) {
+        Observation obs = RagObservability.start(RagObservability.SPAN_AGENT_SYNTHESIZER, observationRegistry);
+        try {
+            doExecute(context);
+        } catch (RuntimeException e) {
+            obs.error(e);
+            throw e;
+        } finally {
+            obs.stop();
+        }
+    }
+
+    private void doExecute(AgentContext context) {
         String userText = userPromptTemplate
                 .replace("{sources}", renderSources(context.selectedSources()))
                 .replace("{query}", context.request().query());

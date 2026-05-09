@@ -2,6 +2,8 @@ package kr.co.mz.agenticai.core.factcheck;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import kr.co.mz.agenticai.core.common.Citation;
 import kr.co.mz.agenticai.core.common.exception.AgenticRagException;
+import kr.co.mz.agenticai.core.common.observability.RagObservability;
 import kr.co.mz.agenticai.core.common.spi.FactChecker;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
@@ -29,12 +32,18 @@ public final class LlmFactChecker implements FactChecker {
     private final String promptTemplate;
     private final ObjectMapper objectMapper;
     private final double minConfidence;
+    private final ObservationRegistry observationRegistry;
 
     public LlmFactChecker(ChatModel chatModel) {
         this(chatModel, KoreanFactCheckPrompts.VERIFY, 0.5);
     }
 
     public LlmFactChecker(ChatModel chatModel, String promptTemplate, double minConfidence) {
+        this(chatModel, promptTemplate, minConfidence, ObservationRegistry.NOOP);
+    }
+
+    public LlmFactChecker(ChatModel chatModel, String promptTemplate, double minConfidence,
+            ObservationRegistry observationRegistry) {
         this.chatModel = Objects.requireNonNull(chatModel, "chatModel");
         this.promptTemplate = Objects.requireNonNull(promptTemplate, "promptTemplate");
         if (minConfidence < 0.0 || minConfidence > 1.0) {
@@ -42,6 +51,7 @@ public final class LlmFactChecker implements FactChecker {
         }
         this.minConfidence = minConfidence;
         this.objectMapper = new ObjectMapper();
+        this.observationRegistry = observationRegistry != null ? observationRegistry : ObservationRegistry.NOOP;
     }
 
     @Override
@@ -52,6 +62,18 @@ public final class LlmFactChecker implements FactChecker {
                     "No source chunks supplied; cannot verify.", Map.of());
         }
 
+        Observation obs = RagObservability.start(RagObservability.SPAN_FACTCHECK, observationRegistry);
+        try {
+            return doCheck(request, obs);
+        } catch (RuntimeException e) {
+            obs.error(e);
+            throw e;
+        } finally {
+            obs.stop();
+        }
+    }
+
+    private FactCheckResult doCheck(FactCheckRequest request, Observation obs) {
         String rendered = promptTemplate
                 .replace("{query}", nullToEmpty(request.originalQuery()))
                 .replace("{answer}", request.answer())
@@ -65,12 +87,18 @@ public final class LlmFactChecker implements FactChecker {
             throw new AgenticRagException("FactChecker chat call failed", e);
         }
         if (raw == null || raw.isBlank()) {
+            obs.lowCardinalityKeyValue(RagObservability.ATTR_FACTCHECK_VERDICT, "ungrounded");
+            obs.highCardinalityKeyValue(RagObservability.ATTR_FACTCHECK_CONFIDENCE, "0.0");
             return new FactCheckResult(false, 0.0, List.of(),
                     "Empty response from LLM judge.", Map.of());
         }
 
         Verdict verdict = parseVerdict(raw);
         boolean grounded = verdict.grounded() && verdict.confidence() >= minConfidence;
+        obs.lowCardinalityKeyValue(RagObservability.ATTR_FACTCHECK_VERDICT,
+                grounded ? "grounded" : "ungrounded");
+        obs.highCardinalityKeyValue(RagObservability.ATTR_FACTCHECK_CONFIDENCE,
+                String.valueOf(verdict.confidence()));
         List<Citation> citations = collectCitations(request.sources(), verdict.supportingSourceIndexes());
         return new FactCheckResult(
                 grounded, verdict.confidence(), citations,

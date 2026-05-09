@@ -1,5 +1,6 @@
 package kr.co.mz.agenticai.core.autoconfigure;
 
+import io.micrometer.observation.ObservationRegistry;
 import java.util.List;
 import kr.co.mz.agenticai.core.agent.client.DefaultAgenticRagClient;
 import kr.co.mz.agenticai.core.agent.client.KoreanRagPrompts;
@@ -38,6 +39,7 @@ public class AgenticRagClientAutoConfiguration {
             ObjectProvider<FactChecker> factChecker,
             RagEventPublisher events,
             List<Guardrail> guardrails,
+            ObjectProvider<ObservationRegistry> observationRegistry,
             AgenticRagProperties props) {
         return new DefaultAgenticRagClient(
                 router, chatModel,
@@ -47,6 +49,8 @@ public class AgenticRagClientAutoConfiguration {
                 new DefaultAgenticRagClient.PromptConfig(
                         KoreanRagPrompts.SYSTEM,
                         KoreanRagPrompts.USER,
-                        props.getClient().getDefaultTopK()));
+                        props.getClient().getDefaultTopK()),
+                observationRegistry.getIfAvailable(),
+                null);
     }
 }

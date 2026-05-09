@@ -1,11 +1,16 @@
 package kr.co.mz.agenticai.core.retrieval;
 
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
+import io.micrometer.tracing.Tracer;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import kr.co.mz.agenticai.core.common.event.RetrievalEvent;
+import kr.co.mz.agenticai.core.common.observability.RagBaggage;
+import kr.co.mz.agenticai.core.common.observability.RagObservability;
 import kr.co.mz.agenticai.core.common.spi.DocumentSource;
 import kr.co.mz.agenticai.core.common.spi.RagEventPublisher;
 import kr.co.mz.agenticai.core.common.spi.Reranker;
@@ -45,6 +50,8 @@ public final class HybridRetrieverRouter implements RetrieverRouter {
     private final QueryExpander queryExpander;
     private final RagEventPublisher events;
     private final int overscanFactor;
+    private final ObservationRegistry observationRegistry;
+    private final Tracer tracer;
 
     public HybridRetrieverRouter(
             List<DocumentSource> sources,
@@ -55,6 +62,35 @@ public final class HybridRetrieverRouter implements RetrieverRouter {
             QueryExpander queryExpander,
             RagEventPublisher events,
             int overscanFactor) {
+        this(sources, fusion, reranker, evaluator, queryTransformer, queryExpander, events,
+                overscanFactor, ObservationRegistry.NOOP, null);
+    }
+
+    public HybridRetrieverRouter(
+            List<DocumentSource> sources,
+            ResultFusion fusion,
+            Reranker reranker,
+            RetrievalEvaluator evaluator,
+            QueryTransformer queryTransformer,
+            QueryExpander queryExpander,
+            RagEventPublisher events,
+            int overscanFactor,
+            ObservationRegistry observationRegistry) {
+        this(sources, fusion, reranker, evaluator, queryTransformer, queryExpander, events,
+                overscanFactor, observationRegistry, null);
+    }
+
+    public HybridRetrieverRouter(
+            List<DocumentSource> sources,
+            ResultFusion fusion,
+            Reranker reranker,
+            RetrievalEvaluator evaluator,
+            QueryTransformer queryTransformer,
+            QueryExpander queryExpander,
+            RagEventPublisher events,
+            int overscanFactor,
+            ObservationRegistry observationRegistry,
+            Tracer tracer) {
         if (sources == null || sources.isEmpty()) {
             throw new IllegalArgumentException("At least one DocumentSource is required");
         }
@@ -69,6 +105,8 @@ public final class HybridRetrieverRouter implements RetrieverRouter {
         this.queryExpander = queryExpander;
         this.events = Objects.requireNonNull(events, "events");
         this.overscanFactor = overscanFactor;
+        this.observationRegistry = observationRegistry != null ? observationRegistry : ObservationRegistry.NOOP;
+        this.tracer = tracer;
     }
 
     @Override
@@ -90,7 +128,10 @@ public final class HybridRetrieverRouter implements RetrieverRouter {
     private RetrievalOutcome doRetrieve(Query routerQuery) {
         Objects.requireNonNull(routerQuery, "query");
         long started = System.currentTimeMillis();
-        String correlationId = UUID.randomUUID().toString();
+        // Reuse the correlation-id propagated via baggage by the caller (e.g. DefaultAgenticRagClient);
+        // fall back to a new UUID when tracing is absent or not yet set.
+        String baggageId = RagBaggage.get(tracer);
+        String correlationId = baggageId != null ? baggageId : UUID.randomUUID().toString();
 
         events.publish(new RetrievalEvent.QueryReceived(
                 routerQuery.text(), null, Instant.now(), correlationId));
@@ -121,21 +162,52 @@ public final class HybridRetrieverRouter implements RetrieverRouter {
         List<List<Document>> rankedLists = new ArrayList<>();
         for (var q : queries) {
             for (DocumentSource source : sources) {
-                List<Document> hits = source.search(q.text(), perSourceTopK, routerQuery.metadataFilters());
+                Observation sourceObs = RagObservability.start(
+                        sourceSpanName(source.name()), observationRegistry);
+                sourceObs.lowCardinalityKeyValue(RagObservability.ATTR_RETRIEVER_ID, source.name());
+                sourceObs.lowCardinalityKeyValue(RagObservability.ATTR_RETRIEVAL_K,
+                        String.valueOf(perSourceTopK));
+                sourceObs.highCardinalityKeyValue(RagObservability.ATTR_CORRELATION_ID, correlationId);
+                List<Document> hits;
+                try {
+                    hits = source.search(q.text(), perSourceTopK, routerQuery.metadataFilters());
+                    sourceObs.highCardinalityKeyValue(RagObservability.ATTR_RETRIEVAL_HITS,
+                            String.valueOf(hits == null ? 0 : hits.size()));
+                } finally {
+                    sourceObs.stop();
+                }
                 if (hits != null && !hits.isEmpty()) {
                     rankedLists.add(hits);
                 }
             }
         }
 
-        List<Document> fused = fusion.fuse(rankedLists, routerQuery.topK() * Math.max(2, overscanFactor));
+        Observation fusionObs = RagObservability.start(RagObservability.SPAN_RETRIEVAL_FUSION, observationRegistry);
+        fusionObs.lowCardinalityKeyValue(RagObservability.ATTR_FUSION_STRATEGY,
+                fusion.getClass().getSimpleName());
+        fusionObs.highCardinalityKeyValue(RagObservability.ATTR_CORRELATION_ID, correlationId);
+        List<Document> fused;
+        try {
+            fused = fusion.fuse(rankedLists, routerQuery.topK() * Math.max(2, overscanFactor));
+        } finally {
+            fusionObs.stop();
+        }
         events.publish(new RetrievalEvent.RetrievalCompleted(
                 routerQuery.text(), fused.size(), "hybrid",
                 System.currentTimeMillis() - started,
                 Instant.now(), correlationId));
 
         long rerankStarted = System.currentTimeMillis();
-        List<Document> reranked = reranker.rerank(routerQuery.text(), fused, routerQuery.topK());
+        Observation rerankObs = RagObservability.start(RagObservability.SPAN_RETRIEVAL_RERANK, observationRegistry);
+        rerankObs.lowCardinalityKeyValue(RagObservability.ATTR_RERANKER_CLASS,
+                reranker.getClass().getSimpleName());
+        rerankObs.highCardinalityKeyValue(RagObservability.ATTR_CORRELATION_ID, correlationId);
+        List<Document> reranked;
+        try {
+            reranked = reranker.rerank(routerQuery.text(), fused, routerQuery.topK());
+        } finally {
+            rerankObs.stop();
+        }
         events.publish(new RetrievalEvent.RerankCompleted(
                 fused.size(), reranked.size(),
                 reranker.getClass().getSimpleName(),
@@ -153,5 +225,13 @@ public final class HybridRetrieverRouter implements RetrieverRouter {
                 correlationId));
 
         return new RetrievalOutcome(reranked, decision);
+    }
+
+    private static String sourceSpanName(String sourceName) {
+        return switch (sourceName) {
+            case "vector" -> RagObservability.SPAN_RETRIEVAL_VECTOR;
+            case "bm25" -> RagObservability.SPAN_RETRIEVAL_BM25;
+            default -> RagObservability.SPAN_RETRIEVAL + "." + sourceName;
+        };
     }
 }

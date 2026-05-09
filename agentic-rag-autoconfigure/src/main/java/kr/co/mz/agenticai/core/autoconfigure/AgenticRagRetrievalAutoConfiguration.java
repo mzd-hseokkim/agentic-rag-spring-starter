@@ -1,5 +1,6 @@
 package kr.co.mz.agenticai.core.autoconfigure;
 
+import io.micrometer.observation.ObservationRegistry;
 import java.util.List;
 import kr.co.mz.agenticai.core.common.spi.ChunkSink;
 import kr.co.mz.agenticai.core.common.spi.CrossEncoderScorer;
@@ -143,6 +144,7 @@ public class AgenticRagRetrievalAutoConfiguration {
             ObjectProvider<QueryTransformer> queryTransformer,
             ObjectProvider<QueryExpander> queryExpander,
             RagEventPublisher events,
+            ObjectProvider<ObservationRegistry> observationRegistry,
             AgenticRagProperties props) {
         return new HybridRetrieverRouter(
                 sources, fusion, reranker,
@@ -150,6 +152,8 @@ public class AgenticRagRetrievalAutoConfiguration {
                 queryTransformer.getIfAvailable(),
                 queryExpander.getIfAvailable(),
                 events,
-                props.getRetrieval().getOverscanFactor());
+                props.getRetrieval().getOverscanFactor(),
+                observationRegistry.getIfAvailable(),
+                null);
     }
 }

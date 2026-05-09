@@ -7,6 +7,7 @@ lucene = "9.12.0"
 jackson = "2.18.2"
 reactor = "3.7.1"
 micrometer = "1.14.2"
+micrometer-tracing = "1.4.2"
 slf4j = "2.0.16"
 junit = "5.11.4"
 assertj = "3.26.3"
@@ -46,6 +47,9 @@ jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", ver
 reactor-core = { module = "io.projectreactor:reactor-core", version.ref = "reactor" }
 reactor-test = { module = "io.projectreactor:reactor-test", version.ref = "reactor" }
 micrometer-core = { module = "io.micrometer:micrometer-core", version.ref = "micrometer" }
+micrometer-observation = { module = "io.micrometer:micrometer-observation", version.ref = "micrometer" }
+micrometer-tracing = { module = "io.micrometer:micrometer-tracing", version.ref = "micrometer-tracing" }
+micrometer-tracing-bridge-otel = { module = "io.micrometer:micrometer-tracing-bridge-otel", version.ref = "micrometer-tracing" }
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }

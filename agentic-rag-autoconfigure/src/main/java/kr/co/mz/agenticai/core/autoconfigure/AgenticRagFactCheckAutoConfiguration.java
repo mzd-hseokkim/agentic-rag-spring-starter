@@ -1,9 +1,11 @@
 package kr.co.mz.agenticai.core.autoconfigure;
 
+import io.micrometer.observation.ObservationRegistry;
 import kr.co.mz.agenticai.core.common.spi.FactChecker;
 import kr.co.mz.agenticai.core.factcheck.KoreanFactCheckPrompts;
 import kr.co.mz.agenticai.core.factcheck.LlmFactChecker;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -18,9 +20,11 @@ public class AgenticRagFactCheckAutoConfiguration {
     // evaluated. We rely on constructor injection instead.
     @Bean
     @ConditionalOnMissingBean(FactChecker.class)
-    public FactChecker factChecker(ChatModel chatModel, AgenticRagProperties props) {
+    public FactChecker factChecker(ChatModel chatModel, ObjectProvider<ObservationRegistry> observationRegistry,
+            AgenticRagProperties props) {
         return new LlmFactChecker(
                 chatModel, KoreanFactCheckPrompts.VERIFY,
-                props.getFactcheck().getMinConfidence());
+                props.getFactcheck().getMinConfidence(),
+                observationRegistry.getIfAvailable());
     }
 }
