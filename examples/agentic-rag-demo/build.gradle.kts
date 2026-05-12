@@ -1,5 +1,39 @@
 plugins {
     id("org.springframework.boot") version "3.4.1"
+    id("com.github.node-gradle.node") version "7.1.0"
+}
+
+node {
+    version.set("20.18.0")
+    download.set(true)
+    nodeProjectDir.set(file("src/main/frontend"))
+}
+
+val frontendBuild = tasks.register<com.github.gradle.node.npm.task.NpmTask>("frontendBuild") {
+    dependsOn(tasks.named("npmInstall"))
+    workingDir.set(file("src/main/frontend"))
+    args.set(listOf("run", "build"))
+    inputs.dir("src/main/frontend/src")
+    inputs.file("src/main/frontend/index.html")
+    inputs.file("src/main/frontend/package.json")
+    inputs.file("src/main/frontend/vite.config.ts")
+    outputs.dir("src/main/resources/static")
+}
+
+tasks.named("processResources") {
+    dependsOn(frontendBuild)
+}
+
+tasks.register<com.github.gradle.node.npm.task.NpmTask>("frontendDev") {
+    group = "application"
+    description = "Run Vite dev server (http://localhost:5173, proxies API to 8080)."
+    dependsOn(tasks.named("npmInstall"))
+    workingDir.set(file("src/main/frontend"))
+    args.set(listOf("run", "dev"))
+}
+
+tasks.named<Delete>("clean") {
+    delete("src/main/resources/static")
 }
 
 the<io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension>().apply {

@@ -26,6 +26,24 @@
 기동 시 `src/main/resources/samples/*.md` 가 자동으로 ingest 된다.
 로그에서 `Ingested 'agentic-rag-overview.md' → N chunks` 확인.
 
+## 프론트엔드 (Vite + React)
+
+`src/main/frontend/` 에 React + TypeScript 앱이 있다. Gradle이 빌드 시 자동으로
+`npm install` + `npm run build` 를 실행해 산출물을 `src/main/resources/static/` 에
+배치하므로, **`bootRun` 하나로 백엔드 + UI가 같이 뜬다** (http://localhost:8080).
+
+개발 중에는 HMR을 위해 Vite dev server를 별도로 띄우는 것이 편하다:
+
+```bash
+# Gradle 태스크로 (node 설치 불요 — 플러그인이 자동 설치)
+./gradlew :examples:agentic-rag-demo:frontendDev
+
+# 또는 직접 npm 으로
+cd examples/agentic-rag-demo/src/main/frontend
+npm install
+npm run dev          # http://localhost:5173, /ask·/ingest·/actuator 는 8080으로 프록시
+```
+
 ## API
 
 ### 1. 질의 (sync)
