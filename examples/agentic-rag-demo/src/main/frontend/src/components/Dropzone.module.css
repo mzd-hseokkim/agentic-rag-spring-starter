@@ -1,0 +1,39 @@
+.zone {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 32px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  background: transparent;
+  user-select: none;
+}
+
+.zone:hover:not(.disabled) {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+.zone:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.dragging {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hint {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.input {
+  display: none;
+}
