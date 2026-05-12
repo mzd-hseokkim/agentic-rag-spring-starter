@@ -1,0 +1,88 @@
+/* Styling: CSS Modules (vanilla). Tailwind 미채택 — 단일 화면 4 패널에 과투자. */
+
+.appShell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+  background: var(--bg);
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.headerTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-h);
+  margin: 0;
+  font-family: var(--heading);
+}
+
+.healthDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #9ca3af; /* 기본: 회색 (polling 전) */
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+
+.healthDot[data-status='up'] {
+  background: #22c55e;
+}
+
+.healthDot[data-status='down'] {
+  background: #ef4444;
+}
+
+/* ── Grid layout ── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr;
+  flex: 1;
+  gap: 0;
+  min-height: 0;
+}
+
+.chatCol {
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.sideStack {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  gap: 0;
+}
+
+.sideStack > * {
+  border-bottom: 1px solid var(--border);
+}
+
+.sideStack > *:last-child {
+  border-bottom: none;
+}
+
+/* ≥1024px: 2-column; <1024px: 단일 컬럼 스택 */
+@media (max-width: 1023px) {
+  .grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+
+  .chatCol {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}
