@@ -22,8 +22,11 @@ export function askStream(
   onToken: (text: string) => void,
   onComplete: (response: RagResponse) => void,
   onError: (err: Event) => void,
+  sessionId?: string,
 ): () => void {
-  const url = `/ask/stream?query=${encodeURIComponent(query)}`;
+  const params = new URLSearchParams({ query });
+  if (sessionId) params.set('sessionId', sessionId);
+  const url = `/ask/stream?${params.toString()}`;
   const es = new EventSource(url);
 
   es.addEventListener('TokenChunk', (e: MessageEvent) => {
