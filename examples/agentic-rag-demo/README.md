@@ -163,3 +163,53 @@ curl -sS -X POST http://localhost:8080/ask \
 
 다른 vector store (pgvector / chroma / qdrant / ...) 를 쓰려면
 `DemoConfig.vectorStore()` 빈을 제거하고 해당 Spring AI starter의존을 추가하면 된다.
+
+## 데모 시나리오
+
+> 스타일링: CSS Modules (vanilla). Tailwind 미채택 — 단일 화면 4 패널에 과투자.
+
+아래 순서로 4개 패널을 모두 사용해 보는 end-to-end 시연 가이드.
+
+### 0. 기동
+
+```bash
+./gradlew :examples:agentic-rag-demo:bootRun
+```
+
+> 빌드 캐시 stale 문제 발생 시:
+> ```bash
+> ./gradlew :examples:agentic-rag-demo:clean bootRun
+> ```
+
+기동 완료 후 http://localhost:8080/ 접속 → 화면 좌측에 ChatPanel, 우측에 IngestPanel / SettingsPanel / MetricsPanel이 세로 스택으로 표시된다. 헤더의 초록 점이 백엔드 헬스를 표시한다.
+
+### 1. 파일 Ingest (IngestPanel)
+
+1. 우측 상단 **IngestPanel**에서 **파일 선택** 또는 드래그앤드롭으로 `.md` / `.pdf` 파일 업로드.
+2. "Ingest" 버튼 클릭 → 진행 상태 확인.
+3. 업로드 완료 toast 메시지 확인.
+
+### 2. 질의 (ChatPanel)
+
+1. 좌측 **ChatPanel** 입력창에 질문 입력 (예: *"업로드한 문서의 핵심 내용을 요약해줘"*).
+2. **Stream / Sync 토글**로 응답 방식 전환 가능.
+   - Stream: 토큰 단위로 실시간 출력.
+   - Sync: 전체 응답을 한 번에 수신.
+3. 응답 하단 **Citations** 섹션에서 참조 문서 확인.
+
+### 3. 멀티턴 대화 (ChatPanel)
+
+1. 세션 입력창에 임의 `sessionId` (예: `demo-1`) 입력.
+2. 첫 질의: *"내 이름은 홍길동입니다."*
+3. 후속 질의: *"방금 알려준 내 이름이 뭐였죠?"* → 응답에 "홍길동" 포함 여부 확인.
+
+### 4. 설정 토글 확인 (SettingsPanel)
+
+1. 우측 **SettingsPanel**에서 `agentic-rag.agents.enabled` / `factcheck.enabled` / `hyde.enabled` / `multi-query.enabled` 토글.
+2. 토글 후 **ChatPanel**에서 같은 질의 재실행 → 응답 품질/구조 변화 확인.
+
+### 검증 기준
+
+- `bootRun` 단일 명령 → http://localhost:8080/ 접속 시 4 패널 모두 렌더.
+- ≥1024px 화면: ChatPanel 좌, 나머지 3개 패널 우측 세로 스택.
+- <1024px 화면: 단일 컬럼으로 순차 표시 (모바일 본격 반응형은 범위 외).
