@@ -257,6 +257,7 @@ public class AgenticRagProperties {
         private List<String> allowedNames = new ArrayList<>();
         /** Tools whose name appears here are excluded even if allowed. */
         private List<String> deniedNames = new ArrayList<>();
+        private Fs fs = new Fs();
 
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean v) { this.enabled = v; }
@@ -268,6 +269,36 @@ public class AgenticRagProperties {
         public void setDeniedNames(List<String> v) {
             this.deniedNames = v == null ? new ArrayList<>() : v;
         }
+        public Fs getFs() { return fs; }
+        public void setFs(Fs v) { this.fs = v; }
+    }
+
+    public static class Fs {
+        /**
+         * Sandbox root directory for file-system tools. Defaults to the JVM
+         * working directory when blank. Relative values are resolved against
+         * {@code user.dir}.
+         */
+        private String root = "";
+        /** Honour {@code .gitignore} rules inside the sandbox root. */
+        private boolean respectGitignore = true;
+        /** Maximum bytes returned per read operation. */
+        private int maxReadBytes = 32 * 1024;
+        /** Maximum lines returned per read operation. */
+        private int maxReadLines = 500;
+        /** Maximum directory entries returned per list operation. */
+        private int maxListEntries = 200;
+
+        public String getRoot() { return root; }
+        public void setRoot(String v) { this.root = v == null ? "" : v; }
+        public boolean isRespectGitignore() { return respectGitignore; }
+        public void setRespectGitignore(boolean v) { this.respectGitignore = v; }
+        public int getMaxReadBytes() { return maxReadBytes; }
+        public void setMaxReadBytes(int v) { this.maxReadBytes = v; }
+        public int getMaxReadLines() { return maxReadLines; }
+        public void setMaxReadLines(int v) { this.maxReadLines = v; }
+        public int getMaxListEntries() { return maxListEntries; }
+        public void setMaxListEntries(int v) { this.maxListEntries = v; }
     }
 
     public static class Memory {
