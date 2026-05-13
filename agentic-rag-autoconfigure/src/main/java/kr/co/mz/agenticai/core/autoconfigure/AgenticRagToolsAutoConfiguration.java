@@ -1,7 +1,11 @@
 package kr.co.mz.agenticai.core.autoconfigure;
 
+import java.nio.file.Path;
 import kr.co.mz.agenticai.core.autoconfigure.tools.CatalogToolProvider;
 import kr.co.mz.agenticai.core.common.spi.ToolProvider;
+import kr.co.mz.agenticai.core.common.spi.OutputLimits;
+import kr.co.mz.agenticai.core.common.spi.WorkspaceSandbox;
+import kr.co.mz.agenticai.core.common.tool.DefaultWorkspaceSandbox;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -37,5 +41,19 @@ public class AgenticRagToolsAutoConfiguration {
                 providers.orderedStream().toList(),
                 cfg.getAllowedNames(),
                 cfg.getDeniedNames());
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(WorkspaceSandbox.class)
+    public WorkspaceSandbox workspaceSandbox(AgenticRagProperties props) {
+        AgenticRagProperties.Fs fsCfg = props.getTools().getFs();
+        Path root = fsCfg.getRoot().isBlank()
+                ? Path.of(System.getProperty("user.dir"))
+                : Path.of(fsCfg.getRoot());
+        OutputLimits limits = new OutputLimits(
+                fsCfg.getMaxReadBytes(),
+                fsCfg.getMaxReadLines(),
+                fsCfg.getMaxListEntries());
+        return new DefaultWorkspaceSandbox(root, limits, fsCfg.isRespectGitignore());
     }
 }
