@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "taskId": "MAE-378",
+  "entries": [
+    {
+      "taskId": "MAE-378",
+      "timestamp": "2026-05-13T11:03:18Z",
+      "reviewerVersion": "unknown",
+      "outcome": "fail",
+      "findings": [
+        {
+          "id": "F-001",
+          "severity": "high",
+          "file": "agentic-rag-autoconfigure/src/main/java/kr/co/mz/agenticai/core/autoconfigure/tools/fs/FileSystemTools.java",
+          "line": 174,
+          "category": "correctness",
+          "message": "readFile truncation sentinel literal N not substituted"
+        }
+      ],
+      "severityCounts": {
+        "critical": 0,
+        "high": 1,
+        "medium": 0,
+        "low": 0,
+        "info": 0
+      },
+      "falsePositive": null,
+      "userOverride": null
+    },
+    {
+      "taskId": "MAE-378",
+      "timestamp": "2026-05-13T11:16:22Z",
+      "reviewerVersion": "unknown",
+      "outcome": "pass",
+      "findings": [
+        {
+          "id": "F-001",
+          "severity": "info",
+          "file": "agentic-rag-autoconfigure/src/main/java/kr/co/mz/agenticai/core/autoconfigure/tools/fs/FileSystemTools.java",
+          "line": 82,
+          "category": "consistency",
+          "message": "glob truncation bypasses OutputLimits.apply (uses inline loop vs listDir uses helper)"
+        },
+        {
+          "id": "F-002",
+          "severity": "info",
+          "file": "agentic-rag-autoconfigure/src/main/java/kr/co/mz/agenticai/core/autoconfigure/tools/fs/OutputLimits.java",
+          "line": 56,
+          "category": "dead-code",
+          "message": "applyString helper unused; readFile uses self-truncation due to stream-incompatible signature"
+        },
+        {
+          "id": "F-003",
+          "severity": "info",
+          "file": "agentic-rag-autoconfigure/src/main/java/kr/co/mz/agenticai/core/autoconfigure/tools/fs/FileSystemTools.java",
+          "line": 130,
+          "category": "micro",
+          "message": "listDir sentinel DirEntry eagerly constructed even when no truncation"
+        }
+      ],
+      "severityCounts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "info": 3
+      },
+      "falsePositive": null,
+      "userOverride": null
+    }
+  ]
+}
