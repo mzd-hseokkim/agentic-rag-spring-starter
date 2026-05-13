@@ -4,9 +4,9 @@ import type { ActuatorEnv } from '../api';
 
 const TOGGLE_KEYS = [
   'agentic-rag.agents.enabled',
-  'factcheck.enabled',
-  'retrieval.query.hyde.enabled',
-  'retrieval.query.multi-query.enabled',
+  'agentic-rag.factcheck.enabled',
+  'agentic-rag.retrieval.query.hyde.enabled',
+  'agentic-rag.retrieval.query.multi-query.enabled',
 ] as const;
 
 type ToggleKey = (typeof TOGGLE_KEYS)[number];

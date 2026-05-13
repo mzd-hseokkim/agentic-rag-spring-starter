@@ -36,6 +36,12 @@ tasks.named<Delete>("clean") {
     delete("src/main/resources/static")
 }
 
+repositories {
+    mavenCentral()
+    maven("https://repo.spring.io/milestone")
+    maven("https://repo.spring.io/snapshot")
+}
+
 the<io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension>().apply {
     imports {
         mavenBom("org.springframework.boot:spring-boot-dependencies:${rootProject.libs.versions.springBoot.get()}")

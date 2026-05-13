@@ -29,28 +29,24 @@ export function askStream(
   const url = `/ask/stream?${params.toString()}`;
   const es = new EventSource(url);
 
-  es.addEventListener('TokenChunk', (e: MessageEvent) => {
-    const payload = JSON.parse(e.data) as { text: string };
-    onToken(payload.text);
-  });
-
-  es.addEventListener('CitationEmitted', () => {
-    // Citation data available for future UI use; no-op for now.
-  });
-
-  es.addEventListener('Completed', (e: MessageEvent) => {
-    const payload = JSON.parse(e.data) as { response: RagResponse };
-    onComplete(payload.response);
-    es.close();
-  });
-
-  es.addEventListener('Failed', (e: MessageEvent) => {
-    // Surface as a synthetic error event so callers handle it uniformly.
-    void e;
-    es.close();
-  });
+  // Backend emits unnamed SSE events (default `message`) with two payload shapes:
+  //   { text: string }                  → token chunk
+  //   { response: RagResponse }         → final response (stream ends after)
+  let completed = false;
+  es.onmessage = (e: MessageEvent) => {
+    const payload = JSON.parse(e.data) as { text?: string; response?: RagResponse };
+    if (payload.text !== undefined) {
+      onToken(payload.text);
+    } else if (payload.response) {
+      completed = true;
+      onComplete(payload.response);
+      es.close();
+    }
+  };
 
   es.onerror = (e: Event) => {
+    // Server closes the stream after the final event; ignore that benign close.
+    if (completed) return;
     onError(e);
     es.close();
   };

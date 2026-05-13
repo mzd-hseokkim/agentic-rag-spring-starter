@@ -9,17 +9,37 @@ interface MetricState {
   loading: boolean;
 }
 
-type MetricName = 'agentic.rag.llm.duration' | 'agentic.rag.retrieval.hits';
+type MetricName =
+  | 'agentic.rag.llm.duration'
+  | 'agentic.rag.retrieval.hits'
+  | 'agentic.rag.factcheck.passed'
+  | 'agentic.rag.factcheck.failed'
+  | 'agentic.rag.agent.run.iterations'
+  | 'agentic.rag.agent.run.failed';
 
 const METRIC_NAMES: MetricName[] = [
   'agentic.rag.llm.duration',
   'agentic.rag.retrieval.hits',
+  'agentic.rag.factcheck.passed',
+  'agentic.rag.factcheck.failed',
+  'agentic.rag.agent.run.iterations',
+  'agentic.rag.agent.run.failed',
 ];
 
 const METRIC_LABELS: Record<MetricName, string> = {
   'agentic.rag.llm.duration': 'LLM Duration',
   'agentic.rag.retrieval.hits': 'Retrieval Hits',
+  'agentic.rag.factcheck.passed': 'Factcheck Passed',
+  'agentic.rag.factcheck.failed': 'Factcheck Failed',
+  'agentic.rag.agent.run.iterations': 'Agent Iterations',
+  'agentic.rag.agent.run.failed': 'Agent Failed',
 };
+
+const COUNT_METRICS = new Set<MetricName>([
+  'agentic.rag.factcheck.passed',
+  'agentic.rag.factcheck.failed',
+  'agentic.rag.agent.run.failed',
+]);
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -40,9 +60,12 @@ function formatHits(val: number | null): string {
 }
 
 export default function MetricsPanel() {
-  const [states, setStates] = useState<Record<MetricName, MetricState>>({
-    'agentic.rag.llm.duration': { value: null, count: null, stale: false, loading: true },
-    'agentic.rag.retrieval.hits': { value: null, count: null, stale: false, loading: true },
+  const [states, setStates] = useState<Record<MetricName, MetricState>>(() => {
+    const init = {} as Record<MetricName, MetricState>;
+    for (const name of METRIC_NAMES) {
+      init[name] = { value: null, count: null, stale: false, loading: true };
+    }
+    return init;
   });
 
   useEffect(() => {
@@ -97,12 +120,15 @@ export default function MetricsPanel() {
           const s = states[name];
           const label = METRIC_LABELS[name];
           const isDuration = name === 'agentic.rag.llm.duration';
+          const isCounter = COUNT_METRICS.has(name);
 
           let displayValue: string;
           if (s.loading) {
             displayValue = 'Loading…';
           } else if (isDuration) {
             displayValue = formatDuration(s.value);
+          } else if (isCounter) {
+            displayValue = formatHits(s.count);
           } else {
             displayValue = formatHits(s.value);
           }
