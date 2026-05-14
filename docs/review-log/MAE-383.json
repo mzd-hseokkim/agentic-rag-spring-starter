@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "taskId": "MAE-383",
+  "entries": [
+    {
+      "taskId": "MAE-383",
+      "timestamp": "2026-05-14T13:45:35Z",
+      "reviewerVersion": "unknown",
+      "outcome": "fail",
+      "findings": [
+        {
+          "id": "F-001",
+          "severity": "critical",
+          "file": "examples/agentic-rag-demo/README.md",
+          "line": 217,
+          "category": "correctness",
+          "message": "tool name fs_list_dir/fs_read_file mismatch actual fs_listDir/fs_readFile"
+        },
+        {
+          "id": "F-002",
+          "severity": "critical",
+          "file": "examples/agentic-rag-demo/README.md",
+          "line": 231,
+          "category": "correctness",
+          "message": "fs_grep demoed but GrepTool never registered as bean"
+        },
+        {
+          "id": "F-003",
+          "severity": "high",
+          "file": "examples/agentic-rag-demo/src/main/resources/application-tools.yml",
+          "line": 15,
+          "category": "config",
+          "message": "respect-gitignore true vs test false mismatch"
+        },
+        {
+          "id": "F-004",
+          "severity": "high",
+          "file": "examples/agentic-rag-demo/src/main/resources/application-tools.yml",
+          "line": 14,
+          "category": "config",
+          "message": "root ../../docs relative path not covered by IT"
+        }
+      ],
+      "severityCounts": {
+        "critical": 2,
+        "high": 2,
+        "medium": 0,
+        "low": 0,
+        "info": 0
+      },
+      "falsePositive": null,
+      "userOverride": null
+    },
+    {
+      "taskId": "MAE-383",
+      "timestamp": "2026-05-14T14:05:53Z",
+      "reviewerVersion": "unknown",
+      "outcome": "pass",
+      "findings": [],
+      "severityCounts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "info": 0
+      },
+      "falsePositive": null,
+      "userOverride": null
+    }
+  ]
+}

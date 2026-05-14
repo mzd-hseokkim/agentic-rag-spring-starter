@@ -208,6 +208,44 @@ curl -sS -X POST http://localhost:8080/ask \
 1. 우측 **SettingsPanel**에서 `agentic-rag.agents.enabled` / `factcheck.enabled` / `hyde.enabled` / `multi-query.enabled` 토글.
 2. 토글 후 **ChatPanel**에서 같은 질의 재실행 → 응답 품질/구조 변화 확인.
 
+### 5. 파일시스템 도구 시연 (tools 프로필)
+
+`tools` 프로필에서 `agentic-rag.tools.fs.enabled=true` 가 활성화되어 `docs/` 디렉토리가 샌드박스로 마운트된다.
+
+```bash
+./gradlew :examples:agentic-rag-demo:bootRun -Pprofile=tools
+```
+
+**fs_listDir — 파일 목록 조회:**
+```bash
+curl -sS -X POST http://localhost:8080/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"docs 폴더에 어떤 파일들이 있어?","sessionId":"demo-fs"}' | jq .answer
+```
+기대 결과: `fs_listDir` 도구가 호출되어 `docs/` 하위 파일 목록이 응답에 포함된다.
+
+**fs_readFile — 문서 내용 읽기:**
+```bash
+curl -sS -X POST http://localhost:8080/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"module-plan-and-design.md 파일의 핵심 내용을 요약해줘","sessionId":"demo-fs"}' | jq .answer
+```
+
+**fs_glob — 패턴으로 파일 찾기:**
+```bash
+curl -sS -X POST http://localhost:8080/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"docs 폴더에서 .md 파일을 모두 찾아줘","sessionId":"demo-fs"}' | jq .answer
+```
+
+**샌드박스 경계 확인 — `../` 탈출 차단:**
+```bash
+curl -sS -X POST http://localhost:8080/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"../src/main/java 폴더 파일 목록 보여줘","sessionId":"demo-fs"}' | jq .answer
+```
+기대 결과: 오류 응답("허용된 경로 밖입니다" 등) — 상위 디렉토리 탈출이 차단됨.
+
 ### 검증 기준
 
 - `bootRun` 단일 명령 → http://localhost:8080/ 접속 시 4 패널 모두 렌더.

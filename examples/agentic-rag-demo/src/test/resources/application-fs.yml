@@ -1,0 +1,13 @@
+agentic-rag:
+  agents:
+    enabled: true
+  tools:
+    fs:
+      enabled: true
+      # user.dir is the Gradle subproject directory at test time.
+      # Two levels up points to the repository root, which always contains docs/.
+      root: "${user.dir}/../../docs"
+      respect-gitignore: false
+      max-read-bytes: 32768
+      max-read-lines: 500
+      max-list-entries: 200

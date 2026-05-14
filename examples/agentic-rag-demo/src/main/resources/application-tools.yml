@@ -8,3 +8,11 @@ agentic-rag:
         출처에 없거나 부족하면, 사용 가능한 도구를 호출하거나 이전 대화 내용을 참고해
         보조 정보를 활용해 답할 수 있습니다.
         간결하고 정확하게 한국어로 답합니다.
+  tools:
+    fs:
+      enabled: true
+      root: ../../docs
+      respect-gitignore: true
+      max-read-bytes: 32768
+      max-read-lines: 500
+      max-list-entries: 200
