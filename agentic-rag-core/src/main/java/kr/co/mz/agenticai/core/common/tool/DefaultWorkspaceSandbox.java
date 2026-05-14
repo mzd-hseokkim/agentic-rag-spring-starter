@@ -1,6 +1,7 @@
 package kr.co.mz.agenticai.core.common.tool;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import kr.co.mz.agenticai.core.common.spi.OutputLimits;
@@ -47,6 +48,13 @@ public final class DefaultWorkspaceSandbox implements WorkspaceSandbox {
         Path resolved = root.resolve(candidate).toRealPath(LinkOption.NOFOLLOW_LINKS);
         if (!resolved.startsWith(root)) {
             throw new SecurityException("Path escapes sandbox root: " + relative);
+        }
+        // If the resolved path is a symlink or NTFS junction, follow links and verify the
+        // target is also within the sandbox root — NOFOLLOW_LINKS only validates the link's
+        // own location, not the destination it points to.
+        Path realTarget = resolved.toRealPath();
+        if (!realTarget.startsWith(root)) {
+            throw new SecurityException("Symlink/junction target escapes sandbox root: " + relative);
         }
         if (respectGitignore && gitignoreMatcher.isIgnored(root.relativize(resolved))) {
             throw new SecurityException("Path is gitignored: " + relative);
