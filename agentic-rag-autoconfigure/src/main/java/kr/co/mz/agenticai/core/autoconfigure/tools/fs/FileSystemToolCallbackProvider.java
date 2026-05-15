@@ -5,21 +5,22 @@ import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 
 /**
- * Exposes {@link FileSystemTools} as a Spring AI {@link ToolCallbackProvider} so that
- * {@code CatalogToolProvider} can aggregate it automatically.
+ * Exposes {@link FileSystemTools} and {@link GrepTool} as a Spring AI
+ * {@link ToolCallbackProvider} so that {@code CatalogToolProvider} can aggregate
+ * them automatically.
  *
  * <p>This class wraps {@link MethodToolCallbackProvider} to keep
- * {@link FileSystemTools} a plain Java object with no Spring dependency.
- * Autoconfigure wiring (bean declaration + {@link WorkspaceSandbox} / {@link OutputLimits}
- * injection) is handled by MAE-380.
+ * {@link FileSystemTools} and {@link GrepTool} plain Java objects with no Spring
+ * dependency. Autoconfigure wiring (bean declaration + {@link WorkspaceSandbox} /
+ * {@link OutputLimits} injection) is handled by MAE-380.
  */
 public final class FileSystemToolCallbackProvider implements ToolCallbackProvider {
 
     private final MethodToolCallbackProvider delegate;
 
-    public FileSystemToolCallbackProvider(FileSystemTools tools) {
+    public FileSystemToolCallbackProvider(FileSystemTools tools, GrepTool grepTool) {
         this.delegate = MethodToolCallbackProvider.builder()
-                .toolObjects(tools)
+                .toolObjects(tools, grepTool)
                 .build();
     }
 

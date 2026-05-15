@@ -238,6 +238,14 @@ curl -sS -X POST http://localhost:8080/ask \
   -d '{"query":"docs 폴더에서 .md 파일을 모두 찾아줘","sessionId":"demo-fs"}' | jq .answer
 ```
 
+**fs_grep — 정규식으로 파일 내용 검색:**
+```bash
+curl -sS -X POST http://localhost:8080/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"docs 폴더에서 RRF 라는 단어가 들어간 곳을 찾아줘","sessionId":"demo-fs"}' | jq .answer
+```
+기대 결과: `fs_grep` 도구가 호출되어 `RRF` 가 포함된 파일/라인이 응답에 포함된다.
+
 **샌드박스 경계 확인 — `../` 탈출 차단:**
 ```bash
 curl -sS -X POST http://localhost:8080/ask \
