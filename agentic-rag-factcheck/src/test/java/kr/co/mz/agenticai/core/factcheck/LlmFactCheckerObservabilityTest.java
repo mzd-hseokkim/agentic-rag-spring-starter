@@ -76,8 +76,7 @@ class LlmFactCheckerObservabilityTest {
         checker.check(req("답변", new Document("s2", "근거 텍스트", Map.of())));
 
         assertThat(capturedAttrs)
-                .containsKey(RagObservability.SPAN_FACTCHECK + ":" + RagObservability.ATTR_FACTCHECK_VERDICT);
-        assertThat(capturedAttrs)
+                .containsKey(RagObservability.SPAN_FACTCHECK + ":" + RagObservability.ATTR_FACTCHECK_VERDICT)
                 .containsKey(RagObservability.SPAN_FACTCHECK + ":" + RagObservability.ATTR_FACTCHECK_CONFIDENCE);
     }
 

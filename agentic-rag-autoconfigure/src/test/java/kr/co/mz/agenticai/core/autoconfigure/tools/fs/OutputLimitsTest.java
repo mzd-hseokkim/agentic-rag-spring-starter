@@ -41,8 +41,7 @@ class OutputLimitsTest {
         OutputLimits limits = new OutputLimits(3, 100);
         List<String> items = List.of("x", "y", "z");
         List<String> result = limits.apply(items, "(truncated)");
-        assertThat(result).doesNotContain("(truncated)");
-        assertThat(result).hasSize(3);
+        assertThat(result).doesNotContain("(truncated)").hasSize(3);
     }
 
     // --- OutputLimits.applyString() ---
@@ -59,10 +58,9 @@ class OutputLimitsTest {
         OutputLimits limits = new OutputLimits(50, 2);
         String content = "line1\nline2\nline3\nline4";
         String result = limits.applyString(content, 4);
-        assertThat(result).contains("line1");
-        assertThat(result).contains("line2");
-        assertThat(result).doesNotContain("line3");
-        assertThat(result).contains("(truncated, 2 more)");
+        assertThat(result)
+                .contains("line1", "line2", "(truncated, 2 more)")
+                .doesNotContain("line3");
     }
 
     // --- FileSystemTools.listDir() truncation ---
@@ -81,9 +79,9 @@ class OutputLimitsTest {
         List<kr.co.mz.agenticai.core.autoconfigure.tools.fs.dto.DirEntry> result =
                 tools.listDir(".", false);
 
-        assertThat(result).hasSize(4); // 3 entries + TRUNCATED sentinel
-        assertThat(result).anySatisfy(e ->
-                assertThat(e.type()).isEqualTo("TRUNCATED"));
+        assertThat(result)
+                .hasSize(4) // 3 entries + TRUNCATED sentinel
+                .anySatisfy(e -> assertThat(e.type()).isEqualTo("TRUNCATED"));
     }
 
     // --- FileSystemTools.readFile() maxLines truncation ---
@@ -101,10 +99,9 @@ class OutputLimitsTest {
 
         String result = tools.readFile("big.txt", null, null);
 
-        assertThat(result).contains("     1\tline1");
-        assertThat(result).contains("     3\tline3");
-        assertThat(result).doesNotContain("line4");
-        assertThat(result).contains("(truncated, more lines available");
+        assertThat(result)
+                .contains("     1\tline1", "     3\tline3", "(truncated, more lines available")
+                .doesNotContain("line4");
     }
 
     // --- FileSystemTools.glob() maxResults truncation ---

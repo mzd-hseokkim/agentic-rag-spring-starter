@@ -27,8 +27,7 @@ class ToolInvocationEventTest {
         assertThat(evt.correlationId()).isEqualTo("corr-1");
 
         var same = new ToolInvocationEvent.Started("readFile", "args", false, now, now, "corr-1");
-        assertThat(evt).isEqualTo(same);
-        assertThat(evt.hashCode()).isEqualTo(same.hashCode());
+        assertThat(evt).isEqualTo(same).hasSameHashCodeAs(same);
     }
 
     @Test

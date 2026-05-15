@@ -94,8 +94,8 @@ class OutputLimitsTest {
 
         String result = truncateBytes(content, limits);
 
-        byte[] bytes = result.getBytes(StandardCharsets.UTF_8);
-        assertThat(bytes.length).isLessThanOrEqualTo(limits.maxBytes() + 64); // allow truncation line
+        assertThat(result.getBytes(StandardCharsets.UTF_8))
+                .hasSizeLessThanOrEqualTo(limits.maxBytes() + 64); // allow truncation line
         assertThat(result).contains("truncated");
     }
 

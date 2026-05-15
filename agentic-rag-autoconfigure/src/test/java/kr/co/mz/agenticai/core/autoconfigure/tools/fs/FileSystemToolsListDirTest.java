@@ -61,14 +61,15 @@ class FileSystemToolsListDirTest {
     @Test
     void fileEntriesHaveCorrectType() {
         List<DirEntry> entries = tools.listDir("a", false);
-        assertThat(entries).anySatisfy(e -> {
-            assertThat(e.name()).isEqualTo("file1.txt");
-            assertThat(e.type()).isEqualTo("FILE");
-            assertThat(e.size()).isGreaterThan(0);
-        });
-        assertThat(entries).anySatisfy(e -> {
-            assertThat(e.name()).isEqualTo("b");
-            assertThat(e.type()).isEqualTo("DIR");
-        });
+        assertThat(entries)
+                .anySatisfy(e -> {
+                    assertThat(e.name()).isEqualTo("file1.txt");
+                    assertThat(e.type()).isEqualTo("FILE");
+                    assertThat(e.size()).isPositive();
+                })
+                .anySatisfy(e -> {
+                    assertThat(e.name()).isEqualTo("b");
+                    assertThat(e.type()).isEqualTo("DIR");
+                });
     }
 }

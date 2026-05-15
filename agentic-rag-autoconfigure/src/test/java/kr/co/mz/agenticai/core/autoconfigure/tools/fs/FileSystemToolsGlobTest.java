@@ -42,8 +42,7 @@ class FileSystemToolsGlobTest {
     @Test
     void matchesJavaFiles() {
         List<String> result = tools.glob("**/*.java", null, null);
-        assertThat(result).hasSize(3);
-        assertThat(result).allMatch(p -> p.endsWith(".java"));
+        assertThat(result).hasSize(3).allMatch(p -> p.endsWith(".java"));
     }
 
     @Test

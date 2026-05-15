@@ -30,7 +30,8 @@ class DefaultWorkspaceSandboxTest {
         try {
             Files.createFile(sibling.resolve("secret.txt"));
             String siblingName = sibling.getFileName().toString();
-            assertThatThrownBy(() -> sandbox(false).resolve("../" + siblingName + "/secret.txt"))
+            DefaultWorkspaceSandbox sb = sandbox(false);
+            assertThatThrownBy(() -> sb.resolve("../" + siblingName + "/secret.txt"))
                     .isInstanceOf(SecurityException.class)
                     .hasMessageContaining("escapes sandbox root");
         } finally {
@@ -44,19 +45,22 @@ class DefaultWorkspaceSandboxTest {
     @Test
     void rejectsAbsolutePath() {
         String absPath = root.toAbsolutePath().toString();
-        assertThatThrownBy(() -> sandbox(false).resolve(absPath))
+        DefaultWorkspaceSandbox sb = sandbox(false);
+        assertThatThrownBy(() -> sb.resolve(absPath))
                 .isInstanceOf(SecurityException.class);
     }
 
     @Test
     void rejectsBlankPath() {
-        assertThatThrownBy(() -> sandbox(false).resolve("   "))
+        DefaultWorkspaceSandbox sb = sandbox(false);
+        assertThatThrownBy(() -> sb.resolve("   "))
                 .isInstanceOf(SecurityException.class);
     }
 
     @Test
     void rejectsNullPath() {
-        assertThatThrownBy(() -> sandbox(false).resolve(null))
+        DefaultWorkspaceSandbox sb = sandbox(false);
+        assertThatThrownBy(() -> sb.resolve(null))
                 .isInstanceOf(SecurityException.class);
     }
 
@@ -92,7 +96,8 @@ class DefaultWorkspaceSandboxTest {
     void gitignoreAppliedWhenFlagTrue() throws IOException {
         Files.writeString(root.resolve(".gitignore"), "*.log\n");
         Files.createFile(root.resolve("app.log"));
-        assertThatThrownBy(() -> sandbox(true).resolve("app.log"))
+        DefaultWorkspaceSandbox sb = sandbox(true);
+        assertThatThrownBy(() -> sb.resolve("app.log"))
                 .isInstanceOf(SecurityException.class)
                 .hasMessageContaining("gitignored");
     }

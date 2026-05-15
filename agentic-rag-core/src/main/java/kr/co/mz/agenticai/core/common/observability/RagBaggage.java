@@ -1,6 +1,5 @@
 package kr.co.mz.agenticai.core.common.observability;
 
-import io.micrometer.tracing.BaggageInScope;
 import io.micrometer.tracing.Tracer;
 
 /**
@@ -29,8 +28,7 @@ public final class RagBaggage {
         }
         // createBaggage/set are deprecated in micrometer-tracing 1.4.x but remain the
         // only cross-bridge (OTel + Brave) API for baggage propagation at this version.
-        BaggageInScope scope = tracer.createBaggage(CORRELATION_ID_KEY).set(correlationId).makeCurrent();
-        return scope;
+        return tracer.createBaggage(CORRELATION_ID_KEY).set(correlationId).makeCurrent();
     }
 
     /**

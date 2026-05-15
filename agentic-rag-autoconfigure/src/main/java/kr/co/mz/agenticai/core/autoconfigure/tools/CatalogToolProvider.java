@@ -32,6 +32,10 @@ public final class CatalogToolProvider implements ToolProvider {
         this.denied = denied == null ? Set.of() : Set.copyOf(denied);
     }
 
+    // S2583: SonarQube trusts the @NonNull contract on getToolCallbacks(), but a
+    // user-supplied ToolCallbackProvider bean (or MCP adapter) can still return null.
+    // Skipping it keeps one misbehaving provider from breaking the whole catalog.
+    @SuppressWarnings("java:S2583")
     @Override
     public List<ToolCallback> tools() {
         List<ToolCallback> out = new ArrayList<>();

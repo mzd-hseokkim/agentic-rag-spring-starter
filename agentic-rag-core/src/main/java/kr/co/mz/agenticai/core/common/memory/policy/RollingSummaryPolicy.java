@@ -26,10 +26,12 @@ import org.springframework.ai.chat.prompt.Prompt;
 public final class RollingSummaryPolicy implements MemoryPolicy {
 
     private static final double SAFETY_MARGIN = 0.85;
-    private static final String SUMMARY_PROMPT_TEMPLATE =
-            "You are a conversation summarizer. Summarize the following conversation exchanges " +
-            "concisely in the same language as the conversation. Preserve key facts, decisions, " +
-            "and context. Output only the summary text, no preamble.\n\n%s";
+    private static final String SUMMARY_PROMPT_TEMPLATE = """
+            You are a conversation summarizer. Summarize the following conversation exchanges \
+            concisely in the same language as the conversation. Preserve key facts, decisions, \
+            and context. Output only the summary text, no preamble.
+
+            %s""";
     private static final String SUMMARY_SEPARATOR = "\n\n[Conversation summary so far]\n";
 
     public static final int DEFAULT_TOKEN_BUDGET = 4000;

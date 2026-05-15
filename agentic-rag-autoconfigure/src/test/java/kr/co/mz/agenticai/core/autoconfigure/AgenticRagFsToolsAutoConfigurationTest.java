@@ -27,7 +27,7 @@ class AgenticRagFsToolsAutoConfigurationTest {
 
     /**
      * Case 1: enabled=true + root set → WorkspaceSandbox + FileSystemToolCallbackProvider beans registered;
-     * CatalogToolProvider exposes fs_glob, fs_listDir, fs_readFile.
+     * CatalogToolProvider exposes fs_glob, fs_grep, fs_listDir, fs_readFile.
      */
     @Test
     void registersBothBeansAndExposesToolsWhenEnabledWithRoot() throws IOException {
@@ -46,7 +46,7 @@ class AgenticRagFsToolsAutoConfigurationTest {
                             ctx.getBean(kr.co.mz.agenticai.core.common.spi.ToolProvider.class);
                     assertThat(toolProvider.tools())
                             .extracting(cb -> cb.getToolDefinition().name())
-                            .containsExactlyInAnyOrder("fs_glob", "fs_listDir", "fs_readFile");
+                            .containsExactlyInAnyOrder("fs_glob", "fs_grep", "fs_listDir", "fs_readFile");
                 });
     }
 

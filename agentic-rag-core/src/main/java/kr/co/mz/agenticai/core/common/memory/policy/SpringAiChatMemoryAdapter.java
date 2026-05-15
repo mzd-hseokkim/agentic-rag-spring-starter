@@ -73,9 +73,6 @@ public final class SpringAiChatMemoryAdapter implements ChatMemory {
             text = "";
         }
         MessageType type = message.getMessageType();
-        if (type == null) {
-            return null;
-        }
         MemoryRecord.Role role = switch (type) {
             case USER -> MemoryRecord.Role.USER;
             case ASSISTANT -> MemoryRecord.Role.ASSISTANT;

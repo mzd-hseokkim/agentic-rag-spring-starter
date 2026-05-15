@@ -70,7 +70,7 @@ class IT_RollingSummaryPolicy {
         assertThat(result.get(0).getText()).contains("대화 요약 내용");
 
         // Result must be smaller than the original 20 messages
-        assertThat(result.size()).isLessThan(longHistory.size());
+        assertThat(result).hasSizeLessThan(longHistory.size());
     }
 
     @Test

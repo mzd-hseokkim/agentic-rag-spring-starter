@@ -8,7 +8,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.text.Normalizer;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -54,7 +53,7 @@ public final class GrepTool {
      * @param pattern         Java regex pattern to search for
      * @param path            directory or file to search (null = workspace root)
      * @param glob            optional glob filter applied to file names (e.g. {@code *.java})
-     * @param type            optional file type filter; only {@code f} (regular file) is supported
+     * @param type            optional file type filter; reserved for future expansion (only {@code f} is supported today)
      * @param outputMode      result shape: {@code FILES_WITH_MATCHES} | {@code CONTENT} | {@code COUNT}
      * @param contextLines    number of surrounding lines to include on each side (CONTENT mode only)
      * @param multiline       if {@code true}, {@code .} matches newlines and pattern can span lines
@@ -63,6 +62,8 @@ public final class GrepTool {
      * @return a {@link GrepResult} containing the matched data
      * @throws IllegalArgumentException if {@code pattern} is not a valid Java regex
      */
+    // Parameters mirror the LLM tool schema; type is retained for forward compatibility.
+    @SuppressWarnings({"java:S107", "java:S1172"})
     @Tool(name = "fs_grep",
             description = "Search files inside the workspace for lines matching a regex. "
                     + "pattern: Java regex. "
@@ -77,7 +78,7 @@ public final class GrepTool {
             @ToolParam(description = "Java regex pattern to search for") String pattern,
             @ToolParam(description = "directory or file to search (null = workspace root)", required = false) String path,
             @ToolParam(description = "glob filter on file names, e.g. '*.java' (null = all files)", required = false) String glob,
-            @ToolParam(description = "file type filter; 'f' = regular files only (null = all)", required = false) String type,
+            @ToolParam(description = "file type filter; 'f' = regular files only (reserved, null = all)", required = false) String type,
             @ToolParam(description = "output mode: FILES_WITH_MATCHES | CONTENT | COUNT (null = FILES_WITH_MATCHES)", required = false) GrepOutputMode outputMode,
             @ToolParam(description = "context lines before/after each match in CONTENT mode (null = 0)", required = false) Integer contextLines,
             @ToolParam(description = "true to allow pattern to span newlines (default false)", required = false) Boolean multiline,
@@ -97,7 +98,7 @@ public final class GrepTool {
                 ? FileSystems.getDefault().getPathMatcher("glob:" + glob)
                 : null;
 
-        List<Path> files = collectFiles(base, globMatcher, type);
+        List<Path> files = collectFiles(base, globMatcher);
 
         return switch (mode) {
             case FILES_WITH_MATCHES -> filesWithMatches(files, compiled, base, ml, limit);
@@ -129,8 +130,7 @@ public final class GrepTool {
         return sandbox.resolve(normalized);
     }
 
-    private List<Path> collectFiles(Path base, PathMatcher globMatcher, String type) {
-        boolean regularOnly = "f".equals(type) || globMatcher != null || !Files.isDirectory(base);
+    private List<Path> collectFiles(Path base, PathMatcher globMatcher) {
         List<Path> result = new ArrayList<>();
         if (Files.isRegularFile(base)) {
             result.add(base);
@@ -198,50 +198,51 @@ public final class GrepTool {
         List<MatchLine> result = new ArrayList<>();
         boolean truncated = false;
 
-        outer:
         for (Path file : files) {
             String relPath = relativize(base, file);
-            if (multiline) {
-                String text;
-                try {
-                    text = readStringSafe(file);
-                } catch (IOException e) {
-                    continue;
+            for (MatchLine ml : collectMatchLines(file, relPath, pattern, multiline, ctx)) {
+                if (result.size() >= limit) {
+                    truncated = true;
+                    break;
                 }
-                // multiline: gather per-match context at line granularity
-                String[] allLines = text.split("\n", -1);
-                boolean[] matchMask = buildMatchMask(pattern, allLines, text);
-                List<MatchLine> fileLines = applyContext(relPath, allLines, matchMask, ctx);
-                for (MatchLine ml : fileLines) {
-                    if (result.size() >= limit) {
-                        truncated = true;
-                        break outer;
-                    }
-                    result.add(ml);
-                }
-            } else {
-                List<String> allLines;
-                try (Stream<String> s = Files.lines(file, StandardCharsets.UTF_8)) {
-                    allLines = s.toList();
-                } catch (IOException e) {
-                    continue;
-                }
-                boolean[] matchMask = new boolean[allLines.size()];
-                for (int i = 0; i < allLines.size(); i++) {
-                    matchMask[i] = pattern.matcher(allLines.get(i)).find();
-                }
-                List<MatchLine> fileLines = applyContext(relPath, allLines.toArray(String[]::new), matchMask, ctx);
-                for (MatchLine ml : fileLines) {
-                    if (result.size() >= limit) {
-                        truncated = true;
-                        break outer;
-                    }
-                    result.add(ml);
-                }
+                result.add(ml);
+            }
+            if (truncated) {
+                break;
             }
         }
 
         return GrepResult.ofContent(List.copyOf(result), truncated);
+    }
+
+    /**
+     * Reads one file and returns its match lines with surrounding context.
+     * Returns an empty list when the file is unreadable or too large.
+     */
+    private List<MatchLine> collectMatchLines(Path file, String relPath, Pattern pattern,
+                                              boolean multiline, int ctx) {
+        try {
+            String[] allLines;
+            boolean[] matchMask;
+            if (multiline) {
+                String text = readStringSafe(file);
+                allLines = text.split("\n", -1);
+                matchMask = buildMatchMask(pattern, allLines, text);
+            } else {
+                List<String> lineList;
+                try (Stream<String> s = Files.lines(file, StandardCharsets.UTF_8)) {
+                    lineList = s.toList();
+                }
+                allLines = lineList.toArray(String[]::new);
+                matchMask = new boolean[allLines.length];
+                for (int i = 0; i < allLines.length; i++) {
+                    matchMask[i] = pattern.matcher(allLines[i]).find();
+                }
+            }
+            return applyContext(relPath, allLines, matchMask, ctx);
+        } catch (IOException e) {
+            return List.of();
+        }
     }
 
     /** Builds a match-mask for multiline mode by mapping regex match positions to lines. */
@@ -270,19 +271,13 @@ public final class GrepTool {
         String[] kinds     = new String[lines.length];
 
         for (int i = 0; i < lines.length; i++) {
-            if (!matchMask[i]) continue;
+            if (!matchMask[i]) {
+                continue;
+            }
             int from = Math.max(0, i - ctx);
             int to   = Math.min(lines.length - 1, i + ctx);
             for (int j = from; j <= to; j++) {
-                if (!included[j]) {
-                    included[j] = true;
-                    if (j < i)      kinds[j] = KIND_BEFORE;
-                    else if (j > i) kinds[j] = KIND_AFTER;
-                    else            kinds[j] = KIND_MATCH;
-                } else if (j == i) {
-                    // a line that was previously BEFORE/AFTER but is now also a MATCH
-                    kinds[j] = KIND_MATCH;
-                }
+                markContextLine(j, i, included, kinds);
             }
         }
 
@@ -292,6 +287,27 @@ public final class GrepTool {
             }
         }
         return result;
+    }
+
+    /** Marks line {@code j} as included and assigns its kind relative to {@code matchLine}. */
+    private static void markContextLine(int j, int matchLine, boolean[] included, String[] kinds) {
+        if (!included[j]) {
+            included[j] = true;
+            kinds[j] = kindOf(j, matchLine);
+        } else if (j == matchLine) {
+            // a line previously included as BEFORE/AFTER is also a match
+            kinds[j] = KIND_MATCH;
+        }
+    }
+
+    private static String kindOf(int line, int matchLine) {
+        if (line < matchLine) {
+            return KIND_BEFORE;
+        }
+        if (line > matchLine) {
+            return KIND_AFTER;
+        }
+        return KIND_MATCH;
     }
 
     // ── COUNT ─────────────────────────────────────────────────────────────────

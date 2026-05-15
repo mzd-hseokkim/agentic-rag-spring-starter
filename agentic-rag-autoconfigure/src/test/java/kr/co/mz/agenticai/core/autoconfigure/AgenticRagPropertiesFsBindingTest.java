@@ -18,9 +18,9 @@ class AgenticRagPropertiesFsBindingTest {
             AgenticRagProperties.Fs fs = props.getTools().getFs();
             assertThat(fs.getRoot()).isEmpty();
             assertThat(fs.isRespectGitignore()).isTrue();
-            assertThat(fs.getMaxReadBytes()).isGreaterThan(0);
-            assertThat(fs.getMaxReadLines()).isGreaterThan(0);
-            assertThat(fs.getMaxListEntries()).isGreaterThan(0);
+            assertThat(fs.getMaxReadBytes()).isPositive();
+            assertThat(fs.getMaxReadLines()).isPositive();
+            assertThat(fs.getMaxListEntries()).isPositive();
         });
     }
 

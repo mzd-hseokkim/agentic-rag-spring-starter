@@ -53,6 +53,11 @@ public final class HybridRetrieverRouter implements RetrieverRouter {
     private final ObservationRegistry observationRegistry;
     private final Tracer tracer;
 
+    // S107: hybrid retrieval pipeline composes many orthogonal collaborators
+    // (sources, fusion, rerank, evaluator, transform/expand, events, observability,
+    // tracing). Each is independently swappable via Spring DI; a config object would
+    // hide the DI shape without reducing wiring complexity.
+    @SuppressWarnings("java:S107")
     public HybridRetrieverRouter(
             List<DocumentSource> sources,
             ResultFusion fusion,
@@ -66,6 +71,7 @@ public final class HybridRetrieverRouter implements RetrieverRouter {
                 overscanFactor, ObservationRegistry.NOOP, null);
     }
 
+    @SuppressWarnings("java:S107")
     public HybridRetrieverRouter(
             List<DocumentSource> sources,
             ResultFusion fusion,
@@ -80,6 +86,7 @@ public final class HybridRetrieverRouter implements RetrieverRouter {
                 overscanFactor, observationRegistry, null);
     }
 
+    @SuppressWarnings("java:S107")
     public HybridRetrieverRouter(
             List<DocumentSource> sources,
             ResultFusion fusion,
@@ -128,8 +135,8 @@ public final class HybridRetrieverRouter implements RetrieverRouter {
     private RetrievalOutcome doRetrieve(Query routerQuery) {
         Objects.requireNonNull(routerQuery, "query");
         long started = System.currentTimeMillis();
-        // Reuse the correlation-id propagated via baggage by the caller (e.g. DefaultAgenticRagClient);
-        // fall back to a new UUID when tracing is absent or not yet set.
+        // Use the correlation-id propagated via baggage by the caller when present.
+        // Fall back to a new UUID when tracing is absent or not yet set.
         String baggageId = RagBaggage.get(tracer);
         String correlationId = baggageId != null ? baggageId : UUID.randomUUID().toString();
 

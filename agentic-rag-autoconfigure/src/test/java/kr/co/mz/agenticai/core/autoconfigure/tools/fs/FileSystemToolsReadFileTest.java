@@ -36,17 +36,15 @@ class FileSystemToolsReadFileTest {
     @Test
     void readsAllLinesWithLineNumberPrefix() {
         String result = tools.readFile("sample.txt", null, null);
-        assertThat(result).contains("     1\tline1");
-        assertThat(result).contains("     5\tline5");
+        assertThat(result).contains("     1\tline1", "     5\tline5");
     }
 
     @Test
     void offsetAndLimitSlice() {
         String result = tools.readFile("sample.txt", 1, 2);
-        assertThat(result).contains("     2\tline2");
-        assertThat(result).contains("     3\tline3");
-        assertThat(result).doesNotContain("line1");
-        assertThat(result).doesNotContain("line4");
+        assertThat(result)
+                .contains("     2\tline2", "     3\tline3")
+                .doesNotContain("line1", "line4");
     }
 
     @Test

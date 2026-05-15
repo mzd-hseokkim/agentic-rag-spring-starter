@@ -78,26 +78,30 @@ final class GitignoreMatcher {
             return null;
         }
         boolean rootAnchored = glob.startsWith("/");
-        String g = rootAnchored ? glob.substring(1) : glob;
+        String body = rootAnchored ? glob.substring(1) : glob;
         StringBuilder sb = new StringBuilder();
         if (!rootAnchored) {
             // match at any depth
             sb.append("(?:.+/)?");
         }
+        sb.append(globBodyToRegex(body));
+        // A pattern without trailing / can match both files and directories
+        sb.append("(?:/.*)?");
+        try {
+            return Pattern.compile(sb.toString());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** Translates the glob body (after root-anchor handling) into a regex fragment. */
+    private static String globBodyToRegex(String g) {
+        StringBuilder sb = new StringBuilder();
         int i = 0;
         while (i < g.length()) {
             char c = g.charAt(i);
             if (c == '*') {
-                if (i + 1 < g.length() && g.charAt(i + 1) == '*') {
-                    // ** matches any path segments
-                    sb.append(".*");
-                    i += 2;
-                    if (i < g.length() && g.charAt(i) == '/') i++; // skip trailing /
-                } else {
-                    // * matches within one segment
-                    sb.append("[^/]*");
-                    i++;
-                }
+                i = appendStar(g, i, sb);
             } else if (c == '?') {
                 sb.append("[^/]");
                 i++;
@@ -106,12 +110,23 @@ final class GitignoreMatcher {
                 i++;
             }
         }
-        // A pattern without trailing / can match both files and directories
-        sb.append("(?:/.*)?");
-        try {
-            return Pattern.compile(sb.toString());
-        } catch (Exception e) {
-            return null;
+        return sb.toString();
+    }
+
+    /** Appends regex for a {@code *} or {@code **} token; returns the index after it. */
+    private static int appendStar(String g, int i, StringBuilder sb) {
+        boolean doubleStar = i + 1 < g.length() && g.charAt(i + 1) == '*';
+        if (doubleStar) {
+            // ** matches any path segments
+            sb.append(".*");
+            int next = i + 2;
+            if (next < g.length() && g.charAt(next) == '/') {
+                next++; // skip trailing /
+            }
+            return next;
         }
+        // * matches within one segment
+        sb.append("[^/]*");
+        return i + 1;
     }
 }

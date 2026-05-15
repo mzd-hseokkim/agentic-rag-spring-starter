@@ -67,12 +67,11 @@ class HybridRetrieverRouterObservabilityTest {
 
         router.retrieve(RetrieverRouter.Query.of("test query", 1));
 
-        // T1: source span
-        assertThat(startedSpans).contains(RagObservability.SPAN_RETRIEVAL_VECTOR);
-        // fusion span
-        assertThat(startedSpans).contains(RagObservability.SPAN_RETRIEVAL_FUSION);
-        // rerank span
-        assertThat(startedSpans).contains(RagObservability.SPAN_RETRIEVAL_RERANK);
+        // source / fusion / rerank spans all started
+        assertThat(startedSpans).contains(
+                RagObservability.SPAN_RETRIEVAL_VECTOR,
+                RagObservability.SPAN_RETRIEVAL_FUSION,
+                RagObservability.SPAN_RETRIEVAL_RERANK);
 
         // all spans stopped
         assertThat(stoppedSpans).containsAll(startedSpans);
@@ -95,8 +94,7 @@ class HybridRetrieverRouterObservabilityTest {
         router.retrieve(RetrieverRouter.Query.of("q", 1));
 
         assertThat(capturedAttrs)
-                .containsEntry(RagObservability.SPAN_RETRIEVAL_BM25 + ":" + RagObservability.ATTR_RETRIEVER_ID, "bm25");
-        assertThat(capturedAttrs)
+                .containsEntry(RagObservability.SPAN_RETRIEVAL_BM25 + ":" + RagObservability.ATTR_RETRIEVER_ID, "bm25")
                 .containsKey(RagObservability.SPAN_RETRIEVAL_BM25 + ":" + RagObservability.ATTR_RETRIEVAL_K);
     }
 

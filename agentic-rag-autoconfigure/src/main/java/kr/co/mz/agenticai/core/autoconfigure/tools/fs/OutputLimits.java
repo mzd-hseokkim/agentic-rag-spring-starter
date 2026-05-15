@@ -8,7 +8,7 @@ import java.util.List;
  * <p>NOTE: MAE-377 will provide the canonical implementation. This placeholder class
  * lives in {@code tools.fs} until that API is stabilised.
  */
-public final class OutputLimits {
+public record OutputLimits(int maxResults, int maxLines) {
 
     /** Default maximum number of list entries returned by any single tool call. */
     public static final int DEFAULT_MAX_RESULTS = 50;
@@ -16,24 +16,8 @@ public final class OutputLimits {
     /** Default maximum number of lines returned by {@code fs_readFile}. */
     public static final int DEFAULT_MAX_LINES = 2000;
 
-    private final int maxResults;
-    private final int maxLines;
-
-    public OutputLimits(int maxResults, int maxLines) {
-        this.maxResults = maxResults;
-        this.maxLines = maxLines;
-    }
-
     public static OutputLimits defaults() {
         return new OutputLimits(DEFAULT_MAX_RESULTS, DEFAULT_MAX_LINES);
-    }
-
-    public int maxResults() {
-        return maxResults;
-    }
-
-    public int maxLines() {
-        return maxLines;
     }
 
     /**

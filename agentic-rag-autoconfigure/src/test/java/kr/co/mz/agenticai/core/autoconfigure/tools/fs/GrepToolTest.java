@@ -104,8 +104,9 @@ class GrepToolTest {
         List<MatchLine> lines = result.contentLines();
         // expect BEFORE and AFTER context kinds as well as MATCH
         List<String> kinds = lines.stream().map(MatchLine::kind).distinct().toList();
-        assertThat(kinds).containsAnyOf("BEFORE", "AFTER");
-        assertThat(kinds).contains("MATCH");
+        assertThat(kinds)
+                .containsAnyOf("BEFORE", "AFTER")
+                .contains("MATCH");
     }
 
     // ── (c) COUNT ─────────────────────────────────────────────────────────────
@@ -213,5 +214,81 @@ class GrepToolTest {
         assertThatThrownBy(() ->
                 tool.grep("hello", "../outside", null, null, null, null, null, null, null))
                 .isInstanceOf(SecurityException.class);
+    }
+
+    // ── (j) glob filter ───────────────────────────────────────────────────────
+
+    @Test
+    void glob_restrictsSearchToMatchingFileNames() throws IOException {
+        Files.writeString(workspace.resolve("notes.log"), "hello in log\n");
+
+        GrepResult result = tool.grep("hello", null, "*.txt", null,
+                GrepOutputMode.FILES_WITH_MATCHES, null, null, null, null);
+
+        assertThat(result.files()).isNotEmpty();
+        assertThat(result.files()).noneMatch(p -> p.endsWith(".log"));
+    }
+
+    // ── (k) CONTENT + multiline ───────────────────────────────────────────────
+
+    @Test
+    void content_multiline_returnsMatchLinesSpanningLines() {
+        GrepResult result = tool.grep("foo\\nbar", null, null, null,
+                GrepOutputMode.CONTENT, null, true, null, null);
+
+        assertThat(result.contentLines()).isNotNull().isNotEmpty();
+        assertThat(result.contentLines()).anyMatch(ml -> ml.path().contains("gamma"));
+    }
+
+    // ── (l) CONTENT + headLimit truncation ────────────────────────────────────
+
+    @Test
+    void content_headLimit_truncatesAndSetsFlag() throws IOException {
+        Files.writeString(workspace.resolve("many.txt"),
+                "m\nm\nm\nm\nm\n");
+
+        GrepResult result = tool.grep("m", "many.txt", null, null,
+                GrepOutputMode.CONTENT, null, null, null, 2);
+
+        assertThat(result.contentLines()).hasSize(2);
+        assertThat(result.truncated()).isTrue();
+    }
+
+    // ── (m) COUNT + multiline ─────────────────────────────────────────────────
+
+    @Test
+    void count_multiline_countsRegexMatches() {
+        GrepResult result = tool.grep("foo", null, null, null,
+                GrepOutputMode.COUNT, null, true, null, null);
+
+        assertThat(result.counts()).isNotNull();
+        assertThat(result.counts().values()).allMatch(n -> n > 0);
+    }
+
+    // ── (n) path pointing to a single file ────────────────────────────────────
+
+    @Test
+    void path_singleFile_searchesOnlyThatFile() {
+        GrepResult result = tool.grep("hello", "alpha.txt", null, null,
+                GrepOutputMode.FILES_WITH_MATCHES, null, null, null, null);
+
+        assertThat(result.files()).hasSize(1);
+        assertThat(result.files().get(0)).isEqualTo("alpha.txt");
+    }
+
+    // ── (o) overlapping context — a context line that is also a match ─────────
+
+    @Test
+    void content_overlappingContext_lineBecomesMatch() throws IOException {
+        Files.writeString(workspace.resolve("adjacent.txt"), "foo\nfoo\n");
+
+        GrepResult result = tool.grep("foo", "adjacent.txt", null, null,
+                GrepOutputMode.CONTENT, 1, null, null, null);
+
+        List<MatchLine> lines = result.contentLines();
+        // both "foo" lines must be reported with kind MATCH (not BEFORE/AFTER)
+        assertThat(lines).filteredOn(ml -> ml.line().equals("foo"))
+                .isNotEmpty()
+                .allMatch(ml -> ml.kind().equals("MATCH"));
     }
 }

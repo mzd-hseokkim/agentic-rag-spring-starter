@@ -43,7 +43,8 @@ class WorkspaceSandboxTest {
                 // Symlink creation not supported or permission denied on this environment
                 assumeTrue(false, "Symlink creation not available: " + e.getMessage());
             }
-            assertThatThrownBy(() -> sandbox().resolve("link.txt"))
+            DefaultWorkspaceSandbox sb = sandbox();
+            assertThatThrownBy(() -> sb.resolve("link.txt"))
                     .isInstanceOf(SecurityException.class);
         } finally {
             Files.deleteIfExists(link);
@@ -82,7 +83,8 @@ class WorkspaceSandboxTest {
         boolean created = canCreateJunction(junction, outside);
         assumeTrue(created, "Junction creation requires elevated privileges — skipping.");
         try {
-            assertThatThrownBy(() -> sandbox().resolve("junc"))
+            DefaultWorkspaceSandbox sb = sandbox();
+            assertThatThrownBy(() -> sb.resolve("junc"))
                     .isInstanceOf(SecurityException.class);
         } finally {
             deleteJunction(junction);

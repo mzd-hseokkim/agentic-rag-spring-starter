@@ -141,7 +141,7 @@ class SummaryAgentTest {
         AgentContext ctx = contextWith("질문", null);
         agent.execute(ctx);
 
-        assertThat(ctx.answer()).isEqualTo("");
+        assertThat(ctx.answer()).isEmpty();
     }
 
     @Test

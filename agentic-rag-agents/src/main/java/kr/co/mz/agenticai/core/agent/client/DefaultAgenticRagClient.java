@@ -74,6 +74,10 @@ public final class DefaultAgenticRagClient implements AgenticRagClient {
         this(router, chatModel, factChecker, events, guardrails, promptConfig, observationRegistry, null);
     }
 
+    // S107: the orchestration entrypoint wires independently-swappable Spring DI
+    // collaborators (router, chat, fact-checker, events, guardrails, prompts,
+    // observability, tracing). A config object would obscure the DI surface.
+    @SuppressWarnings("java:S107")
     public DefaultAgenticRagClient(
             RetrieverRouter router,
             ChatModel chatModel,
