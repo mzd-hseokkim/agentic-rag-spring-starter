@@ -13,7 +13,8 @@ import org.springframework.ai.tool.ToolCallback;
 
 /**
  * Verifies that {@link FileSystemToolCallbackProvider} exposes tool definitions
- * with the expected names ({@code fs_glob}, {@code fs_listDir}, {@code fs_readFile}).
+ * with the expected names ({@code fs_glob}, {@code fs_grep}, {@code fs_listDir},
+ * {@code fs_readFile}).
  */
 class FileSystemToolCallbackProviderTest {
 
@@ -24,13 +25,17 @@ class FileSystemToolCallbackProviderTest {
     void exposesExpectedToolNames() throws IOException {
         Files.createDirectories(workspace);
         WorkspaceSandbox sandbox = new TestWorkspaceSandbox(workspace);
-        FileSystemTools fsTools = new FileSystemTools(sandbox, OutputLimits.defaults());
-        FileSystemToolCallbackProvider provider = new FileSystemToolCallbackProvider(fsTools);
+        OutputLimits limits = OutputLimits.defaults();
+        FileSystemTools fsTools = new FileSystemTools(sandbox, limits);
+        GrepTool grepTool = new GrepTool(sandbox, limits);
+        FileSystemToolCallbackProvider provider =
+                new FileSystemToolCallbackProvider(fsTools, grepTool);
 
         List<String> names = Arrays.stream(provider.getToolCallbacks())
                 .map(cb -> cb.getToolDefinition().name())
                 .toList();
 
-        assertThat(names).containsExactlyInAnyOrder("fs_glob", "fs_listDir", "fs_readFile");
+        assertThat(names).containsExactlyInAnyOrder(
+                "fs_glob", "fs_grep", "fs_listDir", "fs_readFile");
     }
 }

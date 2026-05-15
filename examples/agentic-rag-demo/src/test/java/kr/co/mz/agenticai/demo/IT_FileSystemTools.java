@@ -19,8 +19,8 @@ import org.springframework.test.context.ActiveProfiles;
 
 /**
  * Integration test: verifies that the fs tools profile wires {@link WorkspaceSandbox} and
- * exposes {@code fs_glob}, {@code fs_listDir}, {@code fs_readFile} through {@link ToolProvider},
- * and that path-traversal attempts are rejected.
+ * exposes {@code fs_glob}, {@code fs_grep}, {@code fs_listDir}, {@code fs_readFile} through
+ * {@link ToolProvider}, and that path-traversal attempts are rejected.
  *
  * <p>All external dependencies (Ollama, EmbeddingModel, IngestionPipeline) are replaced
  * with mocks so no running infrastructure is required.
@@ -47,7 +47,7 @@ class IT_FileSystemTools {
     @Autowired
     WorkspaceSandbox workspaceSandbox;
 
-    /** AC-1: CatalogToolProvider aggregates FileSystemToolCallbackProvider — all three fs tools exposed. */
+    /** AC-1: CatalogToolProvider aggregates FileSystemToolCallbackProvider — all four fs tools exposed. */
     @Test
     void fsToolsExposedViaCatalogToolProvider() {
         List<ToolCallback> tools = toolProvider.tools();
@@ -55,7 +55,7 @@ class IT_FileSystemTools {
                 .map(t -> t.getToolDefinition().name())
                 .toList();
 
-        assertThat(toolNames).contains("fs_glob", "fs_listDir", "fs_readFile");
+        assertThat(toolNames).contains("fs_glob", "fs_grep", "fs_listDir", "fs_readFile");
     }
 
     /** AC-2: sandbox resolves a valid relative path inside the workspace root. */

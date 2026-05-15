@@ -3,6 +3,7 @@ package kr.co.mz.agenticai.core.autoconfigure;
 import java.nio.file.Path;
 import kr.co.mz.agenticai.core.autoconfigure.tools.fs.FileSystemToolCallbackProvider;
 import kr.co.mz.agenticai.core.autoconfigure.tools.fs.FileSystemTools;
+import kr.co.mz.agenticai.core.autoconfigure.tools.fs.GrepTool;
 import kr.co.mz.agenticai.core.autoconfigure.tools.fs.OutputLimits;
 import kr.co.mz.agenticai.core.common.spi.WorkspaceSandbox;
 import kr.co.mz.agenticai.core.common.tool.DefaultWorkspaceSandbox;
@@ -72,6 +73,8 @@ public class AgenticRagFsToolsAutoConfiguration {
                         throw new java.io.UncheckedIOException(e);
                     }
                 };
-        return new FileSystemToolCallbackProvider(new FileSystemTools(legacySandbox, limits));
+        return new FileSystemToolCallbackProvider(
+                new FileSystemTools(legacySandbox, limits),
+                new GrepTool(legacySandbox, limits));
     }
 }
